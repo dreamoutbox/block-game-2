@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 /// Minecraft overworld daytime sky color (#78A7FF: rgb(120, 167, 255)).
-pub const MINECRAFT_SKY_COLOR: Color = Color::srgb(120.0 / 255.0, 167.0 / 255.0, 255.0 / 255.0);
+pub const MINECRAFT_SKY_COLOR: Color = Color::srgb(120.0 / 255.0, 167.0 / 255.0, 1.0);
 
 /// Central user-adjustable configuration for voxel world streaming, controls, and performance.
 #[derive(Resource, Clone, Copy, Debug)]

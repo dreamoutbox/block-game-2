@@ -33,18 +33,18 @@ Context (from repo):
   - [x] Unit tests: hit straight on each axis, hit from inside gap, miss beyond reach, normal correctness, negative coordinates
 - Done when: tests pass; function is pure and independent of Bevy ECS.
 
-### Phase 3: Break and place input [STATUS: TODO]
+### Phase 3: Break and place input [STATUS: DONE]
 - Goal: left click breaks the targeted block, right click places the selected block on the hit face.
 - Tasks:
-  - [ ] Add `BlockEditPlugin` (new file) with a system using camera `Transform` forward ray, Phase 2 raycast, Phase 1 edit API
-  - [ ] Only act when cursor grab mode is `Locked`; the click that grabs the cursor must not also break a block (order system vs `cursor_grab_system`, or check state before grab)
-  - [ ] Break: set target to `Air`
-  - [ ] Place: set `hit + normal` to selected block; skip if that cell is non-air; skip if it intersects the player camera position (simple AABB/point check)
-  - [ ] Selected block as a `Resource` (`SelectedBlock`, defaulting to `Grass`) so Phase 4 can drive it
-  - [ ] Click rate limiting (act on `just_pressed`; hold-repeat optional, out of scope)
-  - [ ] Register plugin in `VoxelWorldPlugin`; no changes to `main.rs` beyond that if possible
-  - [ ] Add a tiny crosshair UI node so the target point is visible
-  - [ ] Manual check: break a block, place on all 6 faces, edit at chunk borders with no seams or stale faces
+  - [x] Add `BlockEditPlugin` (new file) with a system using camera `Transform` forward ray, Phase 2 raycast, Phase 1 edit API
+  - [x] Only act when cursor grab mode is `Locked`; the click that grabs the cursor must not also break a block (order system vs `cursor_grab_system`, or check state before grab)
+  - [x] Break: set target to `Air`
+  - [x] Place: set `hit + normal` to selected block; skip if that cell is non-air; skip if it intersects the player camera position (simple AABB/point check)
+  - [x] Selected block as a `Resource` (`SelectedBlock`, defaulting to `Grass`) so Phase 4 can drive it
+  - [x] Click rate limiting (act on `just_pressed`; hold-repeat optional, out of scope)
+  - [x] Register plugin in `VoxelWorldPlugin`; no changes to `main.rs` beyond that if possible
+  - [x] Add a tiny crosshair UI node so the target point is visible
+  - [x] Manual check: break a block, place on all 6 faces, edit at chunk borders with no seams or stale faces
 - Done when: build and tests pass; in game blocks can be broken and placed, including across chunk borders.
 
 ### Phase 4: Hotbar GUI [STATUS: TODO]
