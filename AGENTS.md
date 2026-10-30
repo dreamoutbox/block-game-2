@@ -1,6 +1,7 @@
 # Rust Rules
 
 - use Rust 2024 edition
+- skip `cargo test --doc` only run `cargo nextest run`
 
 ## Error Handling
 - Lib crates: `thiserror`, no `anyhow` in public APIs.
