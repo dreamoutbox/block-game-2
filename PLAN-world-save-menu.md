@@ -20,17 +20,17 @@ Findings (read-only):
   - [x] `VoxelWorldPlugin` stops hard-inserting `TerrainGenerator`; it is provided by a `WorldGenPlugin` (still auto-inserted with defaults for now)
 - Done when: build and all existing tests pass; game looks and plays identically.
 
-### Phase 2: World persistence with `bincode` (no GUI) [STATUS: TODO]
+### Phase 2: World persistence with `bincode` (no GUI) [STATUS: DONE]
 - Goal: a world can be created, saved, and loaded from disk; loaded chunks are not regenerated.
 - Tasks:
-  - [ ] Add deps: `bincode` (with `serde` feature) and `serde` (derive); add serde derives to `BlockId`, `ChunkPos`, `Chunk`
-  - [ ] New `src/save/` module: `world_meta.rs` (name, `TerrainConfig` incl. seed, player position), `world_save.rs` (create/save/load fns), `save_error.rs` (`thiserror`)
-  - [ ] Layout: `saves/<world_name>/meta.bin` plus `saves/<world_name>/chunks/<x>_<y>_<z>.bin` (one chunk per file keeps saves incremental)
-  - [ ] `create_world(name, seed)`: writes `meta.bin`, errors if the name exists; validate names (no path separators)
-  - [ ] Streaming: on chunk request, load from save if the file exists, else generate; mark generated chunks as unsaved
-  - [ ] Track modified chunks (`ChunkModified` marker set by block edit); `save_world` writes modified chunks and writes on unload so edits survive streaming
-  - [ ] Gate filesystem code with `#[cfg(not(target_arch = "wasm32"))]` so the WASM build still compiles (saving is a no-op there)
-  - [ ] Tests (using a temp dir): chunk round-trip, meta round-trip, create-existing errors, load of an edited chunk returns the edit instead of regenerated terrain
+  - [x] Add deps: `bincode` (with `serde` feature) and `serde` (derive); add serde derives to `BlockId`, `ChunkPos`, `Chunk`
+  - [x] New `src/save/` module: `world_meta.rs` (name, `TerrainConfig` incl. seed, player position), `world_save.rs` (create/save/load fns), `save_error.rs` (`thiserror`)
+  - [x] Layout: `saves/<world_name>/meta.bin` plus `saves/<world_name>/chunks/<x>_<y>_<z>.bin` (one chunk per file keeps saves incremental)
+  - [x] `create_world(name, seed)`: writes `meta.bin`, errors if the name exists; validate names (no path separators)
+  - [x] Streaming: on chunk request, load from save if the file exists, else generate; mark generated chunks as unsaved
+  - [x] Track modified chunks (`ChunkModified` marker set by block edit); `save_world` writes modified chunks and writes on unload so edits survive streaming
+  - [x] Gate filesystem code with `#[cfg(not(target_arch = "wasm32"))]` so the WASM build still compiles (saving is a no-op there)
+  - [x] Tests (using a temp dir): chunk round-trip, meta round-trip, create-existing errors, load of an edited chunk returns the edit instead of regenerated terrain
 - Done when: tests pass; a unit/integration test creates a world, edits a block, saves, reloads, and sees the edit; `cargo build --target wasm32-unknown-unknown` still compiles.
 
 ### Phase 3: Game state machine and `bevy_egui` shell [STATUS: TODO]

@@ -1,15 +1,16 @@
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub const CHUNK_SIZE: usize = 16;
 pub const CHUNK_SIZE_I32: i32 = CHUNK_SIZE as i32;
 pub const CHUNK_VOLUME: usize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
 /// Numeric identifier for a voxel block.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct BlockId(pub u16);
 
 /// Chunk grid coordinate in world space.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct ChunkPos(pub IVec3);
 
 impl ChunkPos {
@@ -128,7 +129,7 @@ pub fn chunk_and_local_to_world(
 }
 
 /// Component storing voxel data for a 16x16x16 chunk.
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
     blocks: Vec<BlockId>,
 }

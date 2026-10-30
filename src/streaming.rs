@@ -6,16 +6,17 @@ use crate::asset_texture_loader::{
 use crate::async_mesh::{DebounceSettings, poll_mesh_tasks_system, queue_async_remesh_system};
 use crate::batching::{BatchingStats, setup_voxel_material_system, update_batching_stats_system};
 use crate::block_edit::BlockEditPlugin;
-use crate::chunk::{ChunkPos, world_to_chunk_and_local};
+use crate::chunk::{Chunk, ChunkPos, world_to_chunk_and_local};
 use crate::culling::{VoxelRenderStats, update_render_stats_system};
 use crate::fly_cam::FlyCameraPlugin;
 use crate::fps::FpsOverlayPlugin;
 use crate::hotbar::HotbarPlugin;
 use crate::occlusion::{OcclusionCullingEnabled, OcclusionCullingTimer, occlusion_culling_system};
 use crate::registry::BlockRegistry;
+use crate::save::{ActiveWorld, ChunkModified, save_chunk};
 use crate::settings::GameSettings;
 use crate::world::VoxelWorld;
-use crate::worldgen::{spawn_chunk_async, TerrainGenerator, WorldGenPlugin};
+use crate::worldgen::{spawn_chunk_async_from_storage, TerrainGenerator, WorldGenPlugin};
 
 /// Settings controlling streaming radius and unloading hysteresis around the viewer.
 #[derive(Resource, Clone, Copy, Debug)]
@@ -43,6 +44,7 @@ impl Default for WorldStreamingSettings {
 pub struct Player;
 
 /// Streams chunks dynamically in and out of the world according to player movement.
+#[allow(clippy::too_many_arguments)]
 pub fn stream_chunks_around_player_system(
     mut commands: Commands,
     mut voxel_world: ResMut<VoxelWorld>,
@@ -50,6 +52,9 @@ pub fn stream_chunks_around_player_system(
     game_settings: Option<Res<GameSettings>>,
     streaming_settings: Option<Res<WorldStreamingSettings>>,
     player_query: Query<&Transform, With<Player>>,
+    active_world: Option<Res<ActiveWorld>>,
+    chunks_query: Query<&Chunk>,
+    modified_query: Query<(), With<ChunkModified>>,
 ) {
     let Ok(player_transform) = player_query.single() else {
         return;
@@ -77,6 +82,9 @@ pub fn stream_chunks_around_player_system(
         )
     };
 
+    // World directory handle passed to chunk spawning
+    let world_dir = active_world.as_ref().map(|w| w.dir.clone());
+
     // Load newly in-range chunks
     for dy in -v_rad..=v_rad {
         for dz in -h_rad..=h_rad {
@@ -88,7 +96,13 @@ pub fn stream_chunks_around_player_system(
                         player_chunk.0.y + dy,
                         player_chunk.0.z + dz,
                     );
-                    spawn_chunk_async(&mut commands, &mut voxel_world, &terrain_gen, target_pos);
+                    spawn_chunk_async_from_storage(
+                        &mut commands,
+                        &mut voxel_world,
+                        &terrain_gen,
+                        world_dir.clone(),
+                        target_pos,
+                    );
                 }
             }
         }
@@ -112,6 +126,12 @@ pub fn stream_chunks_around_player_system(
     }
 
     for (pos, entity) in to_unload {
+        if let Some(ref active) = active_world
+            && modified_query.contains(entity)
+            && let Ok(chunk) = chunks_query.get(entity)
+        {
+            let _ = save_chunk(&active.dir, pos, chunk); // best-effort save on chunk unload
+        }
         voxel_world.remove(&pos);
         commands.entity(entity).despawn();
     }

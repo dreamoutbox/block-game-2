@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 /// Configuration options for procedural terrain generation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TerrainConfig {
     /// Random seed determining terrain topology.
     pub seed: u32,

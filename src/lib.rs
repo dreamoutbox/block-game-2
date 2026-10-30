@@ -12,6 +12,7 @@ pub mod hotbar;
 pub mod mesh;
 pub mod occlusion;
 pub mod registry;
+pub mod save;
 pub mod settings;
 pub mod streaming;
 pub mod world;

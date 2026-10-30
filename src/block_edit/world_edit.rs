@@ -65,6 +65,7 @@ pub fn set_block_at(
         return Ok(false);
     }
 
+    commands.entity(entity).insert(crate::save::ChunkModified);
     request_chunk_remesh(commands, entity, EDIT_DEBOUNCE_FRAMES, false);
 
     for (axis, local) in [x, y, z].into_iter().enumerate() {
