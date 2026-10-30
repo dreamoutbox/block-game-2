@@ -54,7 +54,7 @@ pub fn cursor_grab_system(
         return;
     };
 
-    let egui_wants_pointer = if let Ok(mut ctx) = egui_query.single_mut() {
+    let egui_wants_pointer = if let Some(mut ctx) = egui_query.iter_mut().next() {
         ctx.get_mut().egui_wants_pointer_input()
     } else {
         false
@@ -63,7 +63,11 @@ pub fn cursor_grab_system(
     let current_state = state.map(|s| *s.get()).unwrap_or(AppState::InGame);
     match current_state {
         AppState::InGame => {
-            if key_input.just_pressed(KeyCode::Escape) {
+            let pause_requested = key_input.just_pressed(KeyCode::Escape)
+                || key_input.just_released(KeyCode::Escape)
+                || key_input.just_pressed(KeyCode::KeyP);
+
+            if pause_requested {
                 if let Some(ref mut next) = next_state {
                     next.set(AppState::Paused);
                 }
@@ -75,7 +79,10 @@ pub fn cursor_grab_system(
             }
         }
         AppState::Paused => {
-            if key_input.just_pressed(KeyCode::Escape) {
+            let unpause_requested = key_input.just_pressed(KeyCode::Escape)
+                || key_input.just_pressed(KeyCode::KeyP);
+
+            if unpause_requested {
                 if let Some(ref mut next) = next_state {
                     next.set(AppState::InGame);
                 }

@@ -20,6 +20,8 @@
 
 - [ ] add ./assets and resource pack zip to .gitignore. remove those from github.
 
+- [ ] add github workflow to deploy on github pages when workflow_dispatch.
+
 - [x] fix error in WASM egui `No fonts available until first call to Context::run()`.
 
 - [ ] web WASM. save data in IndexedDB.

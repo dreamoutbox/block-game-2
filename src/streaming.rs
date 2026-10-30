@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::EguiPlugin;
+use bevy_egui::{EguiGlobalSettings, EguiPlugin};
 
 use crate::asset_texture_loader::{
     setup_asset_texture_loader_system, update_atlas_from_asset_server_system,
@@ -146,6 +146,10 @@ pub struct VoxelWorldPlugin;
 impl Plugin for VoxelWorldPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VoxelWorld>()
+            .insert_resource(EguiGlobalSettings {
+                auto_create_primary_context: false,
+                ..default()
+            })
             .init_resource::<GameSettings>()
             .init_resource::<WorldStreamingSettings>()
             .init_resource::<DebounceSettings>()

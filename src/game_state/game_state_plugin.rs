@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
+use bevy_egui::PrimaryEguiContext;
 
 use crate::fly_cam::FlyCamera;
 use crate::game_state::app_state::AppState;
@@ -37,7 +38,7 @@ pub fn setup_main_menu_system(
     mut cursor_query: Query<&mut bevy::window::CursorOptions, With<PrimaryWindow>>,
 ) {
     if camera_query.is_empty() {
-        commands.spawn((Camera2d, MenuCamera));
+        commands.spawn((Camera2d, MenuCamera, PrimaryEguiContext));
     }
     if let Ok(mut cursor) = cursor_query.single_mut() {
         cursor.visible = true;
@@ -71,6 +72,7 @@ pub fn setup_in_game_system(
         // First-person creative-mode fly camera
         commands.spawn((
             Camera3d::default(),
+            PrimaryEguiContext,
             Transform::from_translation(spawn_pos).looking_at(Vec3::new(0.0, 16.0, 0.0), Vec3::Y),
             Player,
             FlyCamera::default(),

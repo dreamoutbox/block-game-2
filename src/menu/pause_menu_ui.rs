@@ -19,7 +19,7 @@ pub fn pause_menu_ui_system(
     chunks: Query<&Chunk>,
     modified_chunks: Query<(Entity, &ChunkPos), With<ChunkModified>>,
 ) {
-    let Ok(mut egui_ctx) = egui_query.single_mut() else {
+    let Some(mut egui_ctx) = egui_query.iter_mut().next() else {
         return;
     };
     let ctx = egui_ctx.get_mut();

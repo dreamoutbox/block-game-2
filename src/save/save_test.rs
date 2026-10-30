@@ -28,9 +28,11 @@ fn test_world_meta_save_load_round_trip() {
     let dir = tempdir().unwrap();
     let meta_path = dir.path().to_path_buf();
 
-    let mut config = TerrainConfig::default();
-    config.seed = 98765;
-    config.base_height = 24.0;
+    let config = TerrainConfig {
+        seed: 98765,
+        base_height: 24.0,
+        ..Default::default()
+    };
 
     let original = WorldMeta::new("TestSave".into(), config, [12.0, 34.0, 56.0]);
     save_world_meta(&meta_path, &original).expect("save_world_meta should succeed");

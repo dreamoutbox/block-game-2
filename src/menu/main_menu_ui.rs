@@ -20,7 +20,7 @@ pub fn main_menu_ui_system(
     mut commands: Commands,
     #[allow(unused_mut, unused_variables)] mut app_exit: Option<MessageWriter<AppExit>>,
 ) {
-    let Ok(mut egui_ctx) = egui_query.single_mut() else {
+    let Some(mut egui_ctx) = egui_query.iter_mut().next() else {
         return;
     };
     let ctx = egui_ctx.get_mut();
