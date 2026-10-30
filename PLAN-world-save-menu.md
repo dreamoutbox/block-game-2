@@ -43,14 +43,14 @@ Findings (read-only):
   - [x] Replace Esc handling in `cursor_grab_system` so Esc toggles `InGame` and `Paused` (cursor released while paused)
 - Done when: build and tests pass; app launches into an empty main menu state (stub screen) and a temporary dev trigger can enter and leave `InGame` without leaking chunk entities.
 
-### Phase 4: Menus and world create/load/save GUI [STATUS: TODO]
+### Phase 4: Menus and world create/load/save GUI [STATUS: DONE]
 - Goal: all world management is usable from egui (minimal dev UI).
 - Tasks:
-  - [ ] Main menu: list worlds from `saves/`; buttons Load, Delete (optional skip), "New world" with name and seed text fields; Quit
-  - [ ] Pause menu (Esc): Resume, Save, Save and Quit to Menu; show a status line for save success or error
-  - [ ] Surface `SaveError` in the UI instead of panicking
-  - [ ] Ensure egui consuming pointer/keyboard input does not trigger block edit, hotbar, or camera while a menu is open (`wants_pointer_input` check or state gating)
-  - [ ] Tests: world list function (temp dir) and state transitions via a headless `App` with `StatesPlugin`
+  - [x] Main menu: list worlds from `saves/`; buttons Load, Delete (optional skip), "New world" with name and seed text fields; Quit
+  - [x] Pause menu (Esc): Resume, Save, Save and Quit to Menu; show a status line for save success or error
+  - [x] Surface `SaveError` in the UI instead of panicking
+  - [x] Ensure egui consuming pointer/keyboard input does not trigger block edit, hotbar, or camera while a menu is open (`wants_pointer_input` check or state gating)
+  - [x] Tests: world list function (temp dir) and state transitions via a headless `App` with `StatesPlugin`
 - Done when: tests pass; manual run: create world, break a block, Esc, Save, quit to menu, load world, see the same terrain and the edit without regeneration.
 
 ### Phase 5: Cleanup [STATUS: TODO]

@@ -10,6 +10,7 @@ pub mod fly_cam;
 pub mod fps;
 pub mod game_state;
 pub mod hotbar;
+pub mod menu;
 pub mod mesh;
 pub mod occlusion;
 pub mod registry;

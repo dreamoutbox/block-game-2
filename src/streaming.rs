@@ -13,6 +13,7 @@ use crate::fly_cam::FlyCameraPlugin;
 use crate::fps::FpsOverlayPlugin;
 use crate::game_state::{GameStatePlugin, in_game_or_no_state};
 use crate::hotbar::HotbarPlugin;
+use crate::menu::MenuPlugin;
 use crate::occlusion::{OcclusionCullingEnabled, OcclusionCullingTimer, occlusion_culling_system};
 use crate::registry::BlockRegistry;
 use crate::save::{ActiveWorld, ChunkModified, save_chunk};
@@ -160,6 +161,7 @@ impl Plugin for VoxelWorldPlugin {
             .add_plugins(FlyCameraPlugin)
             .add_plugins(BlockEditPlugin)
             .add_plugins(HotbarPlugin)
+            .add_plugins(MenuPlugin)
             .add_systems(
                 Startup,
                 (
