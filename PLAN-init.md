@@ -64,12 +64,12 @@ fit for frequently-edited voxel worlds).
   - [x] Toggle resource (`OcclusionCullingEnabled`) for A/B perf comparison
 - Done when: a wall-occluded cave/room's chunks are measurably excluded from draw calls (diagnostics counter drops) with scene still rendering correctly when toggled off vs on.
 
-## Phase 7: Draw batching [STATUS: TODO]
+## Phase 7: Draw batching [STATUS: DONE]
 - Goal: reduce texture/material switches, like Minetest's texture-sorted draw list.
 - Tasks:
-  - [ ] Single shared texture atlas + one material for all chunk meshes (avoids per-chunk material swaps entirely — stronger than Minetest's sort-by-texture, since Bevy batches same-material meshes automatically)
-  - [ ] Confirm Bevy's automatic instancing/batching is kicking in for same-material chunk meshes (check render stats)
-  - [ ] If using `bevy_render` custom pipeline for voxel chunks (optional), batch draw calls by material/pipeline key explicitly
+  - [x] Single shared texture atlas + one material for all chunk meshes (avoids per-chunk material swaps entirely — stronger than Minetest's sort-by-texture, since Bevy batches same-material meshes automatically)
+  - [x] Confirm Bevy's automatic instancing/batching is kicking in for same-material chunk meshes (check render stats)
+  - [x] If using `bevy_render` custom pipeline for voxel chunks (optional), batch draw calls by material/pipeline key explicitly
 - Done when: diagnostics show draw calls roughly proportional to visible chunks, not visible faces/blocks, with a single material bound across the world.
 
 ## Phase 8: Integration + load/stream loop [STATUS: TODO]

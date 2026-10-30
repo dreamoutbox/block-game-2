@@ -1,4 +1,5 @@
 pub mod async_mesh;
+pub mod batching;
 pub mod chunk;
 pub mod culling;
 pub mod mesh;
@@ -10,6 +11,7 @@ pub mod world_gen;
 #[cfg(test)]
 mod tests {
     use super::async_mesh::*;
+    use super::batching::*;
     use super::chunk::*;
     use super::culling::*;
     use super::mesh::*;
@@ -530,5 +532,66 @@ mod tests {
         // Occluded marker removed and visibility restored
         assert!(app.world().get::<OccludedChunk>(e_target).is_none());
         assert_eq!(app.world().get::<Visibility>(e_target), Some(&Visibility::Inherited));
+    }
+
+    #[test]
+    fn test_batching_shared_material_and_nearest_sampler() {
+        let mut app = App::new();
+        app.init_resource::<Assets<StandardMaterial>>();
+        app.init_resource::<Assets<Image>>();
+
+        let handle = app.world_mut().resource_scope(
+            |world, mut materials: Mut<Assets<StandardMaterial>>| {
+                let mut images = world.resource_mut::<Assets<Image>>();
+                init_shared_voxel_material(&mut materials, &mut images)
+            },
+        );
+
+        let images = app.world().resource::<Assets<Image>>();
+        let image = images.get(&handle.atlas_image).unwrap();
+        assert!(matches!(image.sampler, bevy::image::ImageSampler::Descriptor(ref d) if matches!(d.min_filter, bevy::image::ImageFilterMode::Nearest)));
+
+        let materials = app.world().resource::<Assets<StandardMaterial>>();
+        let material = materials.get(&handle.material).unwrap();
+        assert_eq!(material.base_color_texture, Some(handle.atlas_image.clone()));
+    }
+
+    #[test]
+    fn test_batching_stats_tracking() {
+        let mut app = App::new();
+        app.init_resource::<Assets<StandardMaterial>>();
+        app.init_resource::<Assets<Image>>();
+        app.init_resource::<BatchingStats>();
+        app.add_systems(Update, update_batching_stats_system);
+
+        let shared_handle = app.world_mut().resource_scope(
+            |world, mut materials: Mut<Assets<StandardMaterial>>| {
+                let mut images = world.resource_mut::<Assets<Image>>();
+                init_shared_voxel_material(&mut materials, &mut images)
+            },
+        );
+
+        // Spawn 3 chunks sharing the exact same material handle
+        app.world_mut().spawn(MeshMaterial3d(shared_handle.material.clone()));
+        app.world_mut().spawn(MeshMaterial3d(shared_handle.material.clone()));
+        app.world_mut().spawn(MeshMaterial3d(shared_handle.material.clone()));
+
+        app.update();
+
+        let stats = *app.world().resource::<BatchingStats>();
+        assert_eq!(stats.total_material_entities, 3);
+        assert_eq!(stats.unique_materials, 1);
+        assert!(stats.is_batch_optimal);
+
+        // Spawn another entity with a separate distinct material
+        let diff_handle = app.world_mut().resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial::default());
+        app.world_mut().spawn(MeshMaterial3d(diff_handle));
+
+        app.update();
+
+        let stats_after = *app.world().resource::<BatchingStats>();
+        assert_eq!(stats_after.total_material_entities, 4);
+        assert_eq!(stats_after.unique_materials, 2);
+        assert!(!stats_after.is_batch_optimal);
     }
 }
