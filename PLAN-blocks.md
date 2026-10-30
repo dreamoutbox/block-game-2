@@ -47,16 +47,16 @@ Context (from repo):
   - [x] Manual check: break a block, place on all 6 faces, edit at chunk borders with no seams or stale faces
 - Done when: build and tests pass; in game blocks can be broken and placed, including across chunk borders.
 
-### Phase 4: Hotbar GUI [STATUS: TODO]
+### Phase 4: Hotbar GUI [STATUS: DONE]
 - Goal: bottom-center hotbar showing grass and dirt; selection controls the placed block.
 - Tasks:
-  - [ ] `Hotbar` resource: ordered slots as `Vec<BlockType>` (initially Grass, Dirt) and selected index; enum-based, no string literals
-  - [ ] Bevy UI: bottom-center container using `hotbar.png` background (scaled with nearest filtering) and `hotbar_selection.png` highlight node
-  - [ ] Slot icons: image node per slot using the block's atlas tile (top texture) cropped via `ImageNode` rect, or a colored swatch fallback
-  - [ ] Input: keys `1`-`9` and mouse wheel change selection (clamped to slot count); keep selection in sync with `SelectedBlock`
-  - [ ] Update system moves the selection highlight when selection changes
-  - [ ] Unit tests: wheel/key selection clamps and wraps as chosen; `SelectedBlock` follows hotbar
-  - [ ] Mark both TODO.md items as done
+  - [x] `Hotbar` resource: ordered slots as `Vec<BlockType>` (initially Grass, Dirt) and selected index; enum-based, no string literals
+  - [x] Bevy UI: bottom-center container using `hotbar.png` background (scaled with nearest filtering) and `hotbar_selection.png` highlight node
+  - [x] Slot icons: image node per slot using the block's atlas tile (top texture) cropped via `ImageNode` rect, or a colored swatch fallback
+  - [x] Input: keys `1`-`9` and mouse wheel change selection (clamped to slot count); keep selection in sync with `SelectedBlock`
+  - [x] Update system moves the selection highlight when selection changes
+  - [x] Unit tests: wheel/key selection clamps and wraps as chosen; `SelectedBlock` follows hotbar
+  - [x] Mark both TODO.md items as done
 - Done when: build and tests pass; hotbar visible with grass and dirt, selecting a slot changes which block is placed.
 
 ## Unknowns, risks, assumptions

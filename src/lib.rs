@@ -7,6 +7,7 @@ pub mod culling;
 pub mod error;
 pub mod fly_cam;
 pub mod fps;
+pub mod hotbar;
 pub mod mesh;
 pub mod occlusion;
 pub mod registry;

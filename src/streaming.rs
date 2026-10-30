@@ -9,6 +9,7 @@ use crate::chunk::{world_to_chunk_and_local, ChunkPos};
 use crate::culling::{update_render_stats_system, VoxelRenderStats};
 use crate::fly_cam::FlyCameraPlugin;
 use crate::block_edit::BlockEditPlugin;
+use crate::hotbar::HotbarPlugin;
 use crate::fps::FpsOverlayPlugin;
 use crate::occlusion::{occlusion_culling_system, OcclusionCullingEnabled, OcclusionCullingTimer};
 use crate::registry::BlockRegistry;
@@ -122,6 +123,7 @@ impl Plugin for VoxelWorldPlugin {
             .add_plugins(FpsOverlayPlugin)
             .add_plugins(FlyCameraPlugin)
             .add_plugins(BlockEditPlugin)
+            .add_plugins(HotbarPlugin)
             .add_systems(
                 Startup,
                 (setup_voxel_material_system, setup_asset_texture_loader_system),

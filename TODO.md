@@ -4,7 +4,7 @@
 
 - [x] camera mode. first person with flying.
 
-- [ ] add block place and break.
+- [x] add block place and break.
 
-- [ ] add player tools bar player gui. currently show grass block, dirt block.
+- [x] add player tools bar player gui. currently show grass block, dirt block.
 
