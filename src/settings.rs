@@ -66,3 +66,6 @@ impl GameSettings {
         }
     }
 }
+
+/// Maximum distance in blocks at which the player can break or place blocks.
+pub const BLOCK_REACH_DISTANCE: f32 = 5.0;

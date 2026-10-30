@@ -25,12 +25,12 @@ Context (from repo):
   - [x] Unit tests (`_test.rs`): edit inside a chunk marks it dirty; edit on border marks neighbor dirty; unloaded chunk returns error
 - Done when: build and all tests pass; no gameplay change yet.
 
-### Phase 2: Voxel raycast [STATUS: TODO]
+### Phase 2: Voxel raycast [STATUS: DONE]
 - Goal: given a ray, find the first solid block hit and the face entered (for place position).
 - Tasks:
-  - [ ] Pure function: Amanatides-Woo voxel DDA taking origin, direction, max distance, and a `Fn(IVec3) -> bool` solidity lookup; returns hit block pos + face normal
-  - [ ] Reach distance as a named constant (default 5.0) in [settings.rs](src/settings.rs)
-  - [ ] Unit tests: hit straight on each axis, hit from inside gap, miss beyond reach, normal correctness, negative coordinates
+  - [x] Pure function: Amanatides-Woo voxel DDA taking origin, direction, max distance, and a `Fn(IVec3) -> bool` solidity lookup; returns hit block pos + face normal
+  - [x] Reach distance as a named constant (default 5.0) in [settings.rs](src/settings.rs)
+  - [x] Unit tests: hit straight on each axis, hit from inside gap, miss beyond reach, normal correctness, negative coordinates
 - Done when: tests pass; function is pure and independent of Bevy ECS.
 
 ### Phase 3: Break and place input [STATUS: TODO]
