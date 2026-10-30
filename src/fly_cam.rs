@@ -2,6 +2,13 @@ use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
 
+use crate::block_edit::get_block_at;
+use crate::chunk::Chunk;
+use crate::collision::resolve_voxel_collision;
+use crate::registry::BlockRegistry;
+use crate::settings::CAMERA_COLLIDER_HALF_EXTENTS;
+use crate::world::VoxelWorld;
+
 /// First-person creative-mode flight camera controller.
 #[derive(Component, Debug, Clone)]
 pub struct FlyCamera {
@@ -51,12 +58,16 @@ pub fn cursor_grab_system(
 }
 
 /// System driving Minecraft creative-mode flight and mouse look.
+#[allow(clippy::too_many_arguments)]
 pub fn fly_camera_controller_system(
     time: Res<Time>,
     key_input: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
     cursor_query: Query<&bevy::window::CursorOptions, With<PrimaryWindow>>,
     game_settings: Option<Res<crate::settings::GameSettings>>,
+    voxel_world: Option<Res<VoxelWorld>>,
+    chunk_query: Query<&Chunk>,
+    registry: Option<Res<BlockRegistry>>,
     mut camera_query: Query<(&mut Transform, &mut FlyCamera)>,
 ) {
     let Ok(cursor) = cursor_query.single() else {
@@ -115,8 +126,30 @@ pub fn fly_camera_controller_system(
         }
 
         if move_direction != Vec3::ZERO {
-            transform.translation +=
-                move_direction.normalize() * current_speed * time.delta_secs();
+            let delta = move_direction.normalize() * current_speed * time.delta_secs();
+
+            // When pressing `C`, bypass collision checks to allow passing through blocks.
+            let passthrough = key_input.pressed(KeyCode::KeyC);
+
+            if !passthrough
+                && let (Some(world), Some(reg)) = (voxel_world.as_deref(), registry.as_deref())
+            {
+                let is_solid_fn = |world_pos: IVec3| -> bool {
+                    if let Some(block_id) = get_block_at(world, &chunk_query, world_pos) {
+                        reg.is_solid(block_id)
+                    } else {
+                        false
+                    }
+                };
+                transform.translation = resolve_voxel_collision(
+                    transform.translation,
+                    delta,
+                    CAMERA_COLLIDER_HALF_EXTENTS,
+                    is_solid_fn,
+                );
+            } else {
+                transform.translation += delta;
+            }
         }
     }
 }

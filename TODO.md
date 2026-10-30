@@ -10,5 +10,5 @@
 
 - [ ] fix dig below dirt. see empty block. should add stone texture (assets/minecraft/textures/block/stone.png).
 
-- [ ] make flying camera not passthrough block. unless press `C`.
+- [x] make flying camera not passthrough block. unless press `C`.
 

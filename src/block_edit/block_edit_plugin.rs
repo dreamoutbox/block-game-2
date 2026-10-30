@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
 
-use crate::block_edit::{get_block_at, set_block_at, voxel_raycast, SelectedBlock};
+use crate::block_edit::{SelectedBlock, get_block_at, set_block_at, voxel_raycast};
 use crate::chunk::{BlockId, Chunk};
+use crate::collision::aabb_overlaps_block;
 use crate::fly_cam::FlyCamera;
 use crate::registry::{BlockRegistry, BlockType};
-use crate::settings::BLOCK_REACH_DISTANCE;
+use crate::settings::{BLOCK_REACH_DISTANCE, CAMERA_COLLIDER_HALF_EXTENTS};
 use crate::world::VoxelWorld;
 
 /// Marker component for the crosshair UI element.
@@ -102,9 +103,8 @@ pub fn block_edit_input_system(
     } else if place_pressed {
         let place_pos = hit.block + hit.normal;
 
-        // Prevent placing inside the player's camera position (conservative 1-block check)
-        let player_cell = origin.floor().as_ivec3();
-        if place_pos == player_cell {
+        // Prevent placing inside the player's camera collider AABB
+        if aabb_overlaps_block(origin, CAMERA_COLLIDER_HALF_EXTENTS, place_pos) {
             return;
         }
 

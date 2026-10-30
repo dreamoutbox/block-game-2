@@ -22,15 +22,15 @@ Context (from repo):
   - [x] Unit tests (`_test.rs`): stopped by wall on each axis (+X, -X, +Y, -Y, +Z, -Z), diagonal movement slides along wall, corner stops movement on both blocked axes, negative world coordinates, and large delta step clamping (no tunneling through 1-block thick walls)
 - Done when: `cargo nextest run --test-threads 1 --fail-fast` passes; resolver is pure and independent of ECS queries.
 
-### Phase 2: Flying camera collision & `C` passthrough [STATUS: TODO]
+### Phase 2: Flying camera collision & `C` passthrough [STATUS: DONE]
 - Goal: Integrate voxel collision into `fly_camera_controller_system` by default and bypass it when holding `C` (or toggling `C`, see assumptions).
 - Tasks:
-  - [ ] Refactor `src/fly_cam.rs` if adding new types (following one-type-per-file rule in `AGENTS.md`), or keep `FlyCamera` and `FlyCameraPlugin` split cleanly
-  - [ ] Update `fly_camera_controller_system` to query `Option<Res<VoxelWorld>>`, `Query<&Chunk>`, and `Option<Res<BlockRegistry>>`
-  - [ ] When `KeyCode::KeyC` is not held (collision active) and world/registry resources are present, resolve `delta` through `resolve_voxel_collision` using `get_block_at` + `registry.is_solid`; when `KeyCode::KeyC` is held (noclip/passthrough active), apply `delta` directly
-  - [ ] Update block placement overlap check in [block_edit_plugin.rs](src/block_edit/block_edit_plugin.rs) to use the shared camera AABB overlap helper so the player cannot place a solid block intersecting their camera collider
-  - [ ] Unit/integration tests: camera moving into a solid block stops at the surface when `C` is not pressed; camera moves right through the solid block when `KeyCode::KeyC` is pressed; camera slides along a wall when moving at an angle
-  - [ ] Mark `- [x] make flying camera not passthrough block. unless press C.` in [TODO.md](TODO.md)
+  - [x] Refactor `src/fly_cam.rs` if adding new types (following one-type-per-file rule in `AGENTS.md`), or keep `FlyCamera` and `FlyCameraPlugin` split cleanly
+  - [x] Update `fly_camera_controller_system` to query `Option<Res<VoxelWorld>>`, `Query<&Chunk>`, and `Option<Res<BlockRegistry>>`
+  - [x] When `KeyCode::KeyC` is not held (collision active) and world/registry resources are present, resolve `delta` through `resolve_voxel_collision` using `get_block_at` + `registry.is_solid`; when `KeyCode::KeyC` is held (noclip/passthrough active), apply `delta` directly
+  - [x] Update block placement overlap check in [block_edit_plugin.rs](src/block_edit/block_edit_plugin.rs) to use the shared camera AABB overlap helper so the player cannot place a solid block intersecting their camera collider
+  - [x] Unit/integration tests: camera moving into a solid block stops at the surface when `C` is not pressed; camera moves right through the solid block when `KeyCode::KeyC` is pressed; camera slides along a wall when moving at an angle
+  - [x] Mark `- [x] make flying camera not passthrough block. unless press C.` in [TODO.md](TODO.md)
 - Done when: `cargo nextest run --test-threads 1 --fail-fast` passes; in-game flying camera collides and slides against terrain blocks and passes through blocks while pressing `C`.
 
 ## Unknowns, risks, assumptions

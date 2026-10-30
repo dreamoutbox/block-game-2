@@ -757,6 +757,73 @@ mod tests {
     }
 
     #[test]
+    fn test_fly_camera_collision_and_c_passthrough() {
+        let mut app = App::new();
+        app.add_plugins(bevy::time::TimePlugin);
+        app.init_resource::<bevy::input::mouse::AccumulatedMouseMotion>();
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<ButtonInput<MouseButton>>();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(BlockRegistry::with_defaults());
+
+        // Setup PrimaryWindow
+        let _window_entity = app.world_mut().spawn((
+            bevy::window::Window::default(),
+            bevy::window::PrimaryWindow,
+            bevy::window::CursorOptions {
+                grab_mode: bevy::window::CursorGrabMode::Locked,
+                visible: false,
+                ..default()
+            },
+        )).id();
+
+        // Spawn a chunk at (0, 0, 0) containing a solid stone block at local (1, 0, 0)
+        let mut chunk = Chunk::new(BlockType::Air.into());
+        chunk.set_block(1, 0, 0, BlockType::Stone.into());
+        let chunk_entity = app.world_mut().spawn((ChunkPos::new(0, 0, 0), chunk)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(ChunkPos::new(0, 0, 0), chunk_entity);
+
+        // Spawn camera at (0.5, 0.5, 0.5) with FlyCamera default yaw/pitch (looking down -Z)
+        // Set yaw to -PI/2 so forward is +X
+        let camera_entity = app.world_mut().spawn((
+            Transform::from_xyz(0.5, 0.5, 0.5).looking_to(Vec3::X, Vec3::Y),
+            FlyCamera {
+                speed: 10.0,
+                yaw: -std::f32::consts::FRAC_PI_2,
+                pitch: 0.0,
+                ..default()
+            },
+        )).id();
+
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(std::time::Duration::from_secs_f32(0.1)));
+        app.add_systems(Update, fly_camera_controller_system);
+
+        // Initial update to initialize Time
+        app.update();
+
+        // Press 'W' to move towards the block at (1, 0, 0)
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::KeyW);
+
+        // Run 2 updates with 'W' pressed (delta = 0.1s each -> 1.0 unit each)
+        app.update();
+        app.update();
+
+        // With collision enabled, camera should be stopped before entering block at X=1.0
+        let pos_collided = app.world().get::<Transform>(camera_entity).unwrap().translation;
+        assert!(pos_collided.x < 1.0 - CAMERA_COLLIDER_HALF_EXTENTS.x);
+        assert!(pos_collided.x > 0.65);
+
+        // Now press 'C' to enable passthrough
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::KeyC);
+        app.update();
+        app.update();
+
+        // With 'C' pressed, camera should have passed through into the block (x > 1.0)
+        let pos_passthrough = app.world().get::<Transform>(camera_entity).unwrap().translation;
+        assert!(pos_passthrough.x > 1.0, "expected x > 1.0, got {}", pos_passthrough.x);
+    }
+
+    #[test]
     fn test_fps_text_setup_and_update() {
         let mut app = App::new();
         app.add_plugins(bevy::time::TimePlugin);
