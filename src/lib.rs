@@ -1,3 +1,4 @@
+pub mod asset_texture_loader;
 pub mod async_mesh;
 pub mod batching;
 pub mod chunk;
@@ -15,6 +16,7 @@ pub mod world_gen;
 
 #[cfg(test)]
 mod tests {
+    use super::asset_texture_loader::*;
     use super::async_mesh::*;
     use super::batching::*;
     use super::chunk::*;
@@ -807,8 +809,63 @@ mod tests {
 
     #[test]
     fn test_minecraft_grass_and_dirt_tiles_in_atlas() {
-        let atlas_image = create_texture_atlas_image();
-        let data = atlas_image.data.as_ref().expect("atlas image should contain pixel data");
+        let mut app = App::new();
+        app.add_plugins(bevy::asset::AssetPlugin::default());
+        app.init_resource::<Assets<StandardMaterial>>();
+        app.init_resource::<Assets<Image>>();
+
+        // Setup shared voxel material handle
+        let material_handle = app.world_mut().resource_scope(
+            |world, mut materials: Mut<Assets<StandardMaterial>>| {
+                let mut images = world.resource_mut::<Assets<Image>>();
+                init_shared_voxel_material(&mut materials, &mut images)
+            },
+        );
+        app.insert_resource(material_handle.clone());
+
+        // Decode source images and add them to Assets<Image>
+        let dirt_png = load_png_rgba("minecraft/textures/block/dirt.png").unwrap();
+        let side_png = load_png_rgba("minecraft/textures/block/grass_block_side.png").unwrap();
+        let overlay_png =
+            load_png_rgba("minecraft/textures/block/grass_block_side_overlay.png").unwrap();
+        let top_png = load_png_rgba("minecraft/textures/block/grass_block_top.png").unwrap();
+
+        let to_bevy_image = |rgba: image::RgbaImage| -> Image {
+            Image::new(
+                bevy::render::render_resource::Extent3d {
+                    width: rgba.width(),
+                    height: rgba.height(),
+                    depth_or_array_layers: 1,
+                },
+                bevy::render::render_resource::TextureDimension::D2,
+                rgba.into_raw(),
+                bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+                bevy::asset::RenderAssetUsages::default(),
+            )
+        };
+
+        let dirt_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(dirt_png.clone()));
+        let side_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(side_png));
+        let overlay_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(overlay_png));
+        let top_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(top_png));
+
+        app.insert_resource(AssetTextureLoader {
+            dirt: dirt_handle,
+            grass_side: side_handle,
+            grass_side_overlay: overlay_handle,
+            grass_top: top_handle,
+            is_loaded: false,
+        });
+
+        app.add_systems(Update, update_atlas_from_asset_server_system);
+        app.update();
+
+        let loader = app.world().resource::<AssetTextureLoader>();
+        assert!(loader.is_loaded, "Atlas should be populated and marked loaded");
+
+        let images = app.world().resource::<Assets<Image>>();
+        let atlas = images.get(&material_handle.atlas_image).unwrap();
+        let data = atlas.data.as_ref().unwrap();
 
         // Helper to extract a pixel from a tile in the atlas
         let get_tile_pixel = |tile_idx: u32, px: u32, py: u32| -> [u8; 4] {
@@ -821,8 +878,6 @@ mod tests {
         };
 
         // 1. Dirt tile (tile 2) should match dirt.png
-        let dirt_png = load_png_rgba("minecraft/textures/block/dirt.png")
-            .expect("dirt.png should be available");
         for y in 0..TILE_PIXEL_SIZE {
             for x in 0..TILE_PIXEL_SIZE {
                 let atlas_pixel = get_tile_pixel(2, x, y);

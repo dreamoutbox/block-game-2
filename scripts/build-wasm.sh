@@ -32,6 +32,8 @@ cargo build $CARGO_FLAGS --target "$TARGET"
 wasm-bindgen --target web --no-typescript --out-dir dist/pkg \
   "target/$TARGET/$PROFILE/block-game-2.wasm"
 cp web/index.html dist/index.html
+rm -rf dist/assets
+cp -r assets dist/assets
 echo "Built ./dist"
 
 if [ "$SERVE" = 1 ]; then

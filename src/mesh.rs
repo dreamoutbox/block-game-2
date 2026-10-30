@@ -133,66 +133,7 @@ pub fn blit_tile_rgba(
     Ok(())
 }
 
-/// Decodes PNG image bytes in memory into an RGBA8 image.
-///
-/// # Arguments
-/// * `bytes` - In-memory PNG encoded bytes.
-///
-/// # Example
-/// ```rust
-/// use block_game_2::mesh::load_png_from_memory;
-///
-/// const DIRT_BYTES: &[u8] = include_bytes!("../assets/minecraft/textures/block/dirt.png");
-/// let img = load_png_from_memory(DIRT_BYTES).unwrap();
-/// assert_eq!(img.width(), 64);
-/// assert_eq!(img.height(), 64);
-/// ```
-pub fn load_png_from_memory(bytes: &[u8]) -> Result<image::RgbaImage, AtlasError> {
-    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
-        .map_err(|e| AtlasError::Decode {
-            path: PathBuf::from("embedded"),
-            source: e,
-        })?;
-    Ok(img.to_rgba8())
-}
-
-/// Retrieves embedded raw PNG bytes for standard Minecraft block textures.
-///
-/// Returns `Some(&'static [u8])` if the requested relative path corresponds to one of the built-in textures,
-/// or `None` if it must be loaded from external storage.
-///
-/// # Arguments
-/// * `relative_path` - Path identifying the texture.
-///
-/// # Example
-/// ```rust
-/// use block_game_2::mesh::get_embedded_texture_bytes;
-///
-/// assert!(get_embedded_texture_bytes("minecraft/textures/block/dirt.png").is_some());
-/// ```
-pub fn get_embedded_texture_bytes(relative_path: &str) -> Option<&'static [u8]> {
-    let normalized = relative_path.strip_prefix("assets/").unwrap_or(relative_path);
-    match normalized {
-        "minecraft/textures/block/dirt.png" => {
-            Some(include_bytes!("../assets/minecraft/textures/block/dirt.png"))
-        }
-        "minecraft/textures/block/grass_block_side.png" => {
-            Some(include_bytes!("../assets/minecraft/textures/block/grass_block_side.png"))
-        }
-        "minecraft/textures/block/grass_block_side_overlay.png" => {
-            Some(include_bytes!("../assets/minecraft/textures/block/grass_block_side_overlay.png"))
-        }
-        "minecraft/textures/block/grass_block_top.png" => {
-            Some(include_bytes!("../assets/minecraft/textures/block/grass_block_top.png"))
-        }
-        _ => None,
-    }
-}
-
 /// Loads a PNG image from a path relative to the workspace or assets directory and decodes it to RGBA8.
-///
-/// Checks embedded asset buffers first, making it work in WASM/browser environments where local filesystem
-/// access is unavailable, before attempting to load from the filesystem.
 ///
 /// # Arguments
 /// * `relative_path` - Path relative to the workspace `assets` directory or project root.
@@ -207,13 +148,6 @@ pub fn get_embedded_texture_bytes(relative_path: &str) -> Option<&'static [u8]> 
 /// ```
 pub fn load_png_rgba(relative_path: impl AsRef<Path>) -> Result<image::RgbaImage, AtlasError> {
     let rel = relative_path.as_ref();
-    let rel_str = rel.to_string_lossy();
-
-    // Check embedded textures first (essential for WASM / web where no filesystem exists)
-    if let Some(bytes) = get_embedded_texture_bytes(&rel_str) {
-        return load_png_from_memory(bytes);
-    }
-
     let full_path = if rel.starts_with("assets") {
         rel.to_path_buf()
     } else {
@@ -332,46 +266,6 @@ pub fn create_texture_atlas_image() -> Image {
     color_tile(&mut data, 5, [101, 67, 33, 255]);
     // Tile 6: Leaves (Green Foliage)
     color_tile(&mut data, 6, [46, 125, 50, 240]);
-
-    // Attempt loading Minecraft textures from assets, falling back gracefully to procedural patterns
-    if let Err(err) = load_and_blit_png(&mut data, 2, "minecraft/textures/block/dirt.png") {
-        warn!(?err, "Failed to load dirt block texture; falling back to procedural color");
-    }
-
-    match load_png_rgba("minecraft/textures/block/grass_block_side.png") {
-        Ok(mut side_img) => {
-            if let Ok(mut overlay_img) =
-                load_png_rgba("minecraft/textures/block/grass_block_side_overlay.png")
-            {
-                tint_rgba_image(&mut overlay_img, MINECRAFT_GRASS_TINT);
-                composite_rgba_image(&mut side_img, &overlay_img);
-            }
-            if let Err(err) = blit_tile_rgba(&mut data, 3, side_img.as_raw()) {
-                warn!(?err, "Failed to blit grass side texture");
-            }
-        }
-        Err(err) => {
-            warn!(
-                ?err,
-                "Failed to load grass block side texture; falling back to procedural color"
-            );
-        }
-    }
-
-    match load_png_rgba("minecraft/textures/block/grass_block_top.png") {
-        Ok(mut top_img) => {
-            tint_rgba_image(&mut top_img, MINECRAFT_GRASS_TINT);
-            if let Err(err) = blit_tile_rgba(&mut data, 4, top_img.as_raw()) {
-                warn!(?err, "Failed to blit grass top texture");
-            }
-        }
-        Err(err) => {
-            warn!(
-                ?err,
-                "Failed to load grass block top texture; falling back to procedural color"
-            );
-        }
-    }
 
     Image::new(
         Extent3d {
