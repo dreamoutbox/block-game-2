@@ -11,13 +11,13 @@ Findings (read-only):
 - Errors: lib uses `thiserror` ([error.rs](src/error.rs)); bin uses `anyhow`. The crate also builds for WASM ([scripts/build-wasm.sh](scripts/build-wasm.sh)), where there is no filesystem.
 - Tests: `cargo nextest run --test-threads 1 --fail-fast`. Style: one type per file, `mod.rs` re-exports only.
 
-### Phase 1: Extract world generation into `worldgen/` module [STATUS: TODO]
+### Phase 1: Extract world generation into `worldgen/` module [STATUS: DONE]
 - Goal: terrain generation is an isolated module with no behavior change.
 - Tasks:
-  - [ ] Create `src/worldgen/` (`mod.rs` re-exports only); one type per file: `terrain_config.rs`, `terrain_generator.rs`, `generate_chunk_task.rs`; spawn and poll helpers in `chunk_spawn.rs`
-  - [ ] Remove `world_gen.rs`; update `lib.rs` and imports in `streaming.rs` and the `lib.rs` tests
-  - [ ] Move the existing worldgen tests into `*_test.rs` files in the new module
-  - [ ] `VoxelWorldPlugin` stops hard-inserting `TerrainGenerator`; it is provided by a `WorldGenPlugin` (still auto-inserted with defaults for now)
+  - [x] Create `src/worldgen/` (`mod.rs` re-exports only); one type per file: `terrain_config.rs`, `terrain_generator.rs`, `generate_chunk_task.rs`; spawn and poll helpers in `chunk_spawn.rs`
+  - [x] Remove `world_gen.rs`; update `lib.rs` and imports in `streaming.rs` and the `lib.rs` tests
+  - [x] Move the existing worldgen tests into `*_test.rs` files in the new module
+  - [x] `VoxelWorldPlugin` stops hard-inserting `TerrainGenerator`; it is provided by a `WorldGenPlugin` (still auto-inserted with defaults for now)
 - Done when: build and all existing tests pass; game looks and plays identically.
 
 ### Phase 2: World persistence with `bincode` (no GUI) [STATUS: TODO]
