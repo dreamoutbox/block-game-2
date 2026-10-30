@@ -25,6 +25,7 @@ mod tests {
     use super::mesh::*;
     use super::occlusion::*;
     use super::registry::*;
+    use super::settings::*;
     use super::streaming::*;
     use super::world::*;
     use super::world_gen::*;
@@ -848,5 +849,21 @@ mod tests {
         let grass_side_bottom = get_tile_pixel(3, 32, 60);
         let dirt_bottom = dirt_png.get_pixel(32, 60).0;
         assert_eq!(grass_side_bottom, dirt_bottom);
+    }
+
+    #[test]
+    fn test_minecraft_sky_color_resource() {
+        let mut app = App::new();
+        app.insert_resource(ClearColor(MINECRAFT_SKY_COLOR));
+
+        let clear_color = app.world().resource::<ClearColor>();
+        match clear_color.0 {
+            Color::Srgba(srgba) => {
+                assert!((srgba.red - 120.0 / 255.0).abs() < 0.01);
+                assert!((srgba.green - 167.0 / 255.0).abs() < 0.01);
+                assert!((srgba.blue - 1.0).abs() < 0.01);
+            }
+            _ => panic!("Expected Srgba color"),
+        }
     }
 }

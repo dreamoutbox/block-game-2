@@ -31,11 +31,11 @@ Test command: `cargo nextest run --test-threads 1 --fail-fast`.
   - [x] Visual check: run game, inspect grass edges and dirt cliffs for correct orientation and no bleeding between tiles (nearest sampling already on)
 - Done when: tests pass; in-game grass shows textured top/sides, dirt shows dirt texture.
 
-### Phase 3: Minecraft sky color [STATUS: TODO]
+### Phase 3: Minecraft sky color [STATUS: DONE]
 - Goal: background sky is Minecraft's light blue.
 - Tasks:
-  - [ ] Add `ClearColor` resource in `main.rs` with Minecraft overworld sky `#78A7FF` (`rgb 120,167,255`), defined as a named constant
-  - [ ] Optionally match fog later (out of scope unless asked)
+  - [x] Add `ClearColor` resource in `main.rs` with Minecraft overworld sky `#78A7FF` (`rgb 120,167,255`), defined as a named constant
+  - [x] Optionally match fog later (out of scope unless asked)
 - Done when: build passes; game window background is light blue.
 
 ## Unknowns, risks, assumptions
