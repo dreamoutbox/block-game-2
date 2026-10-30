@@ -1,7 +1,9 @@
 use bevy::math::Vec3;
 use bevy::prelude::*;
 use block_game_2::fly_cam::FlyCamera;
-use block_game_2::settings::MINECRAFT_SKY_COLOR;
+use block_game_2::settings::{
+    MINECRAFT_SKY_COLOR, SUN_LIGHT_ILLUMINANCE, SUN_LIGHT_POSITION, SUN_LIGHT_TARGET,
+};
 use block_game_2::streaming::{Player, VoxelWorldPlugin};
 
 fn main() {
@@ -32,13 +34,13 @@ fn setup_scene(mut commands: Commands) {
         FlyCamera::default(),
     ));
 
-    // Directional sunlight
+    // Directional sunlight configured via settings
     commands.spawn((
         DirectionalLight {
-            illuminance: 15_000.0,
+            illuminance: SUN_LIGHT_ILLUMINANCE,
             shadow_maps_enabled: true,
             ..default()
         },
-        Transform::from_xyz(50.0, 80.0, 50.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_translation(SUN_LIGHT_POSITION).looking_at(SUN_LIGHT_TARGET, Vec3::Y),
     ));
 }

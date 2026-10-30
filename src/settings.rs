@@ -3,6 +3,14 @@ use bevy::prelude::*;
 /// Minecraft overworld daytime sky color (#78A7FF: rgb(120, 167, 255)).
 pub const MINECRAFT_SKY_COLOR: Color = Color::srgb(120.0 / 255.0, 167.0 / 255.0, 1.0);
 
+/// Directional sunlight illuminance in lux.
+/// Kept moderate (approx. 9,000 - 10,000 lux) so voxels are clearly visible without overexposure/glare.
+pub const SUN_LIGHT_ILLUMINANCE: f32 = 9_000.0;
+
+/// Directional sunlight transform position and target looking position.
+pub const SUN_LIGHT_POSITION: Vec3 = Vec3::new(50.0, 80.0, 50.0);
+pub const SUN_LIGHT_TARGET: Vec3 = Vec3::ZERO;
+
 /// Central user-adjustable configuration for voxel world streaming, controls, and performance.
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct GameSettings {
