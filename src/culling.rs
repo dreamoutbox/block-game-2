@@ -51,6 +51,11 @@ pub fn chunk_world_aabb(pos: ChunkPos) -> Aabb {
     }
 }
 
+/// Checks whether a camera frustum has been computed with valid normal vectors.
+pub fn is_frustum_initialized(frustum: &Frustum) -> bool {
+    frustum.half_spaces[0].normal() != Vec3A::ZERO
+}
+
 /// Tests whether a chunk's bounding box intersects the given view frustum.
 ///
 /// # Arguments

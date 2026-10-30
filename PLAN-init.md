@@ -54,14 +54,14 @@ fit for frequently-edited voxel worlds).
   - [x] Sanity check: disable all solid chunks outside view, confirm draw call count via Bevy diagnostics/`RenderDiagnosticsPlugin`
 - Done when: moving camera shows draw-call count tracking visible chunk count only, confirmed via diagnostics overlay.
 
-## Phase 6: Occlusion culling [STATUS: TODO]
+## Phase 6: Occlusion culling [STATUS: DONE]
 - Goal: skip chunks hidden behind other solid chunks, like Minetest's raycast occlusion check.
 - Tasks:
-  - [ ] Per-chunk occlusion test: sample ray from camera to chunk center (+ corners for accuracy), step through intervening chunks checking solidity
-  - [ ] Run occlusion pass each frame only on frustum-visible chunks (cheap prefilter from Phase 5 first)
-  - [ ] Randomize/jitter sample ray per Minetest's later fix (avoid systematic false negatives from fixed sampling)
-  - [ ] Distance-based cheapening: coarser/fewer samples for far chunks
-  - [ ] Toggle resource (`OcclusionCullingEnabled`) for A/B perf comparison
+  - [x] Per-chunk occlusion test: sample ray from camera to chunk center (+ corners for accuracy), step through intervening chunks checking solidity
+  - [x] Run occlusion pass each frame only on frustum-visible chunks (cheap prefilter from Phase 5 first)
+  - [x] Randomize/jitter sample ray per Minetest's later fix (avoid systematic false negatives from fixed sampling)
+  - [x] Distance-based cheapening: coarser/fewer samples for far chunks
+  - [x] Toggle resource (`OcclusionCullingEnabled`) for A/B perf comparison
 - Done when: a wall-occluded cave/room's chunks are measurably excluded from draw calls (diagnostics counter drops) with scene still rendering correctly when toggled off vs on.
 
 ## Phase 7: Draw batching [STATUS: TODO]

@@ -2,6 +2,7 @@ pub mod async_mesh;
 pub mod chunk;
 pub mod culling;
 pub mod mesh;
+pub mod occlusion;
 pub mod registry;
 pub mod world;
 pub mod world_gen;
@@ -12,6 +13,7 @@ mod tests {
     use super::chunk::*;
     use super::culling::*;
     use super::mesh::*;
+    use super::occlusion::*;
     use super::registry::*;
     use super::world::*;
     use super::world_gen::*;
@@ -466,5 +468,67 @@ mod tests {
         assert_eq!(stats.total_chunks, 2);
         assert_eq!(stats.visible_chunks, 1);
         assert_eq!(stats.culled_chunks, 1);
+    }
+
+    #[test]
+    fn test_chunk_solid_detection() {
+        let registry = BlockRegistry::with_defaults();
+
+        let solid_chunk = Chunk::new(BlockType::Stone.into());
+        assert!(check_chunk_solid(&solid_chunk, &registry));
+
+        let mut mixed_chunk = Chunk::new(BlockType::Stone.into());
+        mixed_chunk.set_block(0, 0, 0, BlockType::Air.into());
+        assert!(!check_chunk_solid(&mixed_chunk, &registry));
+    }
+
+    #[test]
+    fn test_ray_blocking_by_solid_chunk() {
+        let is_solid = |pos: ChunkPos| -> bool {
+            pos == ChunkPos::new(1, 0, 0)
+        };
+
+        let camera_pos = Vec3::new(8.0, 8.0, 8.0); // Inside chunk (0, 0, 0)
+        let target_blocked = Vec3::new(40.0, 8.0, 8.0); // Inside chunk (2, 0, 0)
+        let target_unblocked = Vec3::new(8.0, 40.0, 8.0); // Inside chunk (0, 2, 0)
+
+        assert!(is_ray_blocked(camera_pos, target_blocked, ChunkPos::new(2, 0, 0), &is_solid));
+        assert!(!is_ray_blocked(camera_pos, target_unblocked, ChunkPos::new(0, 2, 0), &is_solid));
+    }
+
+    #[test]
+    fn test_occlusion_culling_system_and_toggle() {
+        let mut app = App::new();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(OcclusionCullingEnabled(true));
+        app.add_systems(Update, occlusion_culling_system);
+
+        // Spawn Camera at (8, 8, 8)
+        app.world_mut().spawn((
+            Camera3d::default(),
+            Transform::from_xyz(8.0, 8.0, 8.0),
+            GlobalTransform::from_xyz(8.0, 8.0, 8.0),
+        ));
+
+        // Intervening solid chunk at (1, 0, 0)
+        let e_solid = app.world_mut().spawn((ChunkPos::new(1, 0, 0), SolidChunk, Visibility::Inherited)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(ChunkPos::new(1, 0, 0), e_solid);
+
+        // Target occluded chunk at (2, 0, 0)
+        let e_target = app.world_mut().spawn((ChunkPos::new(2, 0, 0), Visibility::Inherited)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(ChunkPos::new(2, 0, 0), e_target);
+
+        // Run occlusion system -> target chunk is marked occluded and hidden
+        app.update();
+        assert!(app.world().get::<OccludedChunk>(e_target).is_some());
+        assert_eq!(app.world().get::<Visibility>(e_target), Some(&Visibility::Hidden));
+
+        // Toggle occlusion culling OFF
+        app.world_mut().insert_resource(OcclusionCullingEnabled(false));
+        app.update();
+
+        // Occluded marker removed and visibility restored
+        assert!(app.world().get::<OccludedChunk>(e_target).is_none());
+        assert_eq!(app.world().get::<Visibility>(e_target), Some(&Visibility::Inherited));
     }
 }

@@ -240,13 +240,15 @@ pub fn poll_mesh_tasks_system(
     mut tasks: Query<(
         Entity,
         &ChunkPos,
+        &Chunk,
         &mut ComputeMeshTask,
         Option<&RequeueRemesh>,
     )>,
+    registry: Res<BlockRegistry>,
     material_res: Option<Res<VoxelMaterialHandle>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    for (entity, &pos, mut task_comp, requeue) in tasks.iter_mut() {
+    for (entity, &pos, chunk, mut task_comp, requeue) in tasks.iter_mut() {
         if task_comp.0.is_finished() {
             let mesh = block_on(&mut task_comp.0);
             let mesh_handle = meshes.add(mesh);
@@ -268,6 +270,12 @@ pub fn poll_mesh_tasks_system(
 
             if let Some(ref mat) = material_res {
                 entity_cmds.insert(MeshMaterial3d(mat.material.clone()));
+            }
+
+            if crate::occlusion::check_chunk_solid(chunk, &registry) {
+                entity_cmds.insert(crate::occlusion::SolidChunk);
+            } else {
+                entity_cmds.remove::<crate::occlusion::SolidChunk>();
             }
 
             if requeue.is_some() {

@@ -127,6 +127,12 @@ pub fn sync_remesh_dirty_chunks_system(
             entity_cmds.insert(MeshMaterial3d(mat.material.clone()));
         }
 
+        if crate::occlusion::check_chunk_solid(chunk, &registry) {
+            entity_cmds.insert(crate::occlusion::SolidChunk);
+        } else {
+            entity_cmds.remove::<crate::occlusion::SolidChunk>();
+        }
+
         entity_cmds.remove::<ChunkDirty>();
     }
 }
