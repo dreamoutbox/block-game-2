@@ -3,6 +3,7 @@ pub mod async_mesh;
 pub mod batching;
 pub mod block_edit;
 pub mod chunk;
+pub mod collision;
 pub mod culling;
 pub mod error;
 pub mod fly_cam;

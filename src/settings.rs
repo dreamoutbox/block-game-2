@@ -77,3 +77,6 @@ impl GameSettings {
 
 /// Maximum distance in blocks at which the player can break or place blocks.
 pub const BLOCK_REACH_DISTANCE: f32 = 5.0;
+
+/// Half-extents of the flying camera collision AABB (bounding box width/depth/height = 0.6 blocks).
+pub const CAMERA_COLLIDER_HALF_EXTENTS: Vec3 = Vec3::splat(0.3);

@@ -12,14 +12,14 @@ Context (from repo):
 - New types must live in their own snake_case file per `AGENTS.md`, with `mod.rs` used only for module declarations and re-exports.
 - Test command: `cargo nextest run --test-threads 1 --fail-fast`.
 
-### Phase 1: Voxel AABB collision resolver [STATUS: TODO]
+### Phase 1: Voxel AABB collision resolver [STATUS: DONE]
 - Goal: Pure, Bevy-ECS-independent function that resolves a moving AABB (centered at camera position with configurable half-extents) against solid unit-cube voxels with per-axis sliding.
 - Tasks:
-  - [ ] Define camera collider half-extents constant in [settings.rs](src/settings.rs) (e.g., `CAMERA_COLLIDER_HALF_EXTENTS: Vec3 = Vec3::splat(0.3)` so the camera cannot clip into faces due to the near plane)
-  - [ ] Add a pure helper function (e.g., `resolve_voxel_collision(pos: Vec3, delta: Vec3, half_extents: Vec3, is_solid: impl Fn(IVec3) -> bool) -> Vec3`) that steps/sweeps axis-by-axis (X, Y, Z) so the camera slides smoothly along walls, floors, and ceilings without tunneling on large frame deltas
-  - [ ] Add a helper to check whether a candidate block `IVec3` overlaps the camera collider AABB at `pos`, to share between collision and block-placement checks
-  - [ ] Add doc comments describing function purpose, arguments, and example usage
-  - [ ] Unit tests (`_test.rs`): stopped by wall on each axis (+X, -X, +Y, -Y, +Z, -Z), diagonal movement slides along wall, corner stops movement on both blocked axes, negative world coordinates, and large delta step clamping (no tunneling through 1-block thick walls)
+  - [x] Define camera collider half-extents constant in [settings.rs](src/settings.rs) (e.g., `CAMERA_COLLIDER_HALF_EXTENTS: Vec3 = Vec3::splat(0.3)` so the camera cannot clip into faces due to the near plane)
+  - [x] Add a pure helper function (e.g., `resolve_voxel_collision(pos: Vec3, delta: Vec3, half_extents: Vec3, is_solid: impl Fn(IVec3) -> bool) -> Vec3`) that steps/sweeps axis-by-axis (X, Y, Z) so the camera slides smoothly along walls, floors, and ceilings without tunneling on large frame deltas
+  - [x] Add a helper to check whether a candidate block `IVec3` overlaps the camera collider AABB at `pos`, to share between collision and block-placement checks
+  - [x] Add doc comments describing function purpose, arguments, and example usage
+  - [x] Unit tests (`_test.rs`): stopped by wall on each axis (+X, -X, +Y, -Y, +Z, -Z), diagonal movement slides along wall, corner stops movement on both blocked axes, negative world coordinates, and large delta step clamping (no tunneling through 1-block thick walls)
 - Done when: `cargo nextest run --test-threads 1 --fail-fast` passes; resolver is pure and independent of ECS queries.
 
 ### Phase 2: Flying camera collision & `C` passthrough [STATUS: TODO]
