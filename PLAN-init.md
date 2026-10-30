@@ -5,15 +5,15 @@ per-face culling, async meshing, frustum culling, occlusion culling, draw
 batching. Greedy meshing intentionally excluded (per prior discussion: bad
 fit for frequently-edited voxel worlds).
 
-## Phase 1: Chunk data model [STATUS: TODO]
+## Phase 1: Chunk data model [STATUS: DONE]
 - Goal: in-memory voxel world, chunked like Minetest's 16³ MapBlocks.
 - Tasks:
-  - [ ] Pin `bevy = "0.20.1"` in `Cargo.toml`
-  - [ ] `Chunk` component: `[[[BlockId; 16]; 16]; 16]` or flat `Vec<BlockId>` (flat + index fn, avoid 3D array cache-miss patterns)
-  - [ ] `ChunkPos` (i32x3) + `World` resource: `HashMap<ChunkPos, Entity>`
-  - [ ] Block registry (resource): id → `is_opaque`, `is_solid`, texture indices
-  - [ ] Dirty-flag component (`ChunkDirty`) set on block edit, cleared after remesh
-  - [ ] Unit tests: block get/set, chunk↔world coord conversion, dirty flag lifecycle
+  - [x] Pin `bevy = "0.20.1"` in `Cargo.toml`
+  - [x] `Chunk` component: `[[[BlockId; 16]; 16]; 16]` or flat `Vec<BlockId>` (flat + index fn, avoid 3D array cache-miss patterns)
+  - [x] `ChunkPos` (i32x3) + `World` resource: `HashMap<ChunkPos, Entity>`
+  - [x] Block registry (resource): id → `is_opaque`, `is_solid`, texture indices
+  - [x] Dirty-flag component (`ChunkDirty`) set on block edit, cleared after remesh
+  - [x] Unit tests: block get/set, chunk↔world coord conversion, dirty flag lifecycle
 - Done when: chunks can be created, edited, and queried in isolation (no rendering yet); `cargo test` green.
 
 ## Phase 2: World generation [STATUS: TODO]
