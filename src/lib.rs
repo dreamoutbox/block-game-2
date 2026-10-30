@@ -7,6 +7,7 @@ pub mod fps;
 pub mod mesh;
 pub mod occlusion;
 pub mod registry;
+pub mod settings;
 pub mod streaming;
 pub mod world;
 pub mod world_gen;
@@ -223,13 +224,13 @@ mod tests {
         // 1 block isolated -> 6 faces -> 36 indices
         let mut chunk = Chunk::new(BlockType::Air.into());
         chunk.set_block(5, 5, 5, BlockType::Stone.into());
-        let mesh_single = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry);
+        let mesh_single = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry).unwrap();
         let count_single = mesh_single.indices().unwrap().len();
         assert_eq!(count_single, 6 * 6); // 36 indices
 
         // 2 adjacent blocks -> 10 faces -> 60 indices
         chunk.set_block(6, 5, 5, BlockType::Stone.into());
-        let mesh_adjacent = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry);
+        let mesh_adjacent = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry).unwrap();
         let count_adjacent = mesh_adjacent.indices().unwrap().len();
         assert_eq!(count_adjacent, 10 * 6); // 60 indices
     }
@@ -247,7 +248,7 @@ mod tests {
         chunk_b.set_block(0, 0, 0, BlockType::Stone.into());
 
         // Without Chunk B, Chunk A should have 6 faces (including PosX)
-        let mesh_without_b = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk_a, &|_| None, &registry);
+        let mesh_without_b = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk_a, &|_| None, &registry).unwrap();
         assert_eq!(mesh_without_b.indices().unwrap().len(), 36);
 
         // With Chunk B neighbor present at ChunkPos(1, 0, 0), PosX face of Chunk A should be culled (5 faces = 30 indices)
@@ -258,7 +259,7 @@ mod tests {
                 None
             }
         };
-        let mesh_with_b = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk_a, &get_chunk, &registry);
+        let mesh_with_b = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk_a, &get_chunk, &registry).unwrap();
         assert_eq!(mesh_with_b.indices().unwrap().len(), 5 * 6);
     }
 
@@ -374,7 +375,7 @@ mod tests {
 
         // Mutating original chunk after snapshot does NOT alter snapshot geometry
         chunk.set_block(1, 0, 0, BlockType::Stone.into());
-        let mesh = snapshot.build_mesh(&registry);
+        let mesh = snapshot.build_mesh(&registry).unwrap();
         // Single block in snapshot = 36 indices
         assert_eq!(mesh.indices().unwrap().len(), 36);
     }

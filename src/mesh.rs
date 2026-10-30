@@ -106,8 +106,7 @@ pub fn sync_remesh_dirty_chunks_system(
             all_chunks.get(neighbor_entity).ok()
         };
 
-        let mesh = build_chunk_mesh(pos, chunk, &get_chunk, &registry);
-        let mesh_handle = meshes.add(mesh);
+        let mesh_opt = build_chunk_mesh(pos, chunk, &get_chunk, &registry);
 
         let translation = Vec3::new(
             (pos.0.x * CHUNK_SIZE_I32) as f32,
@@ -117,14 +116,20 @@ pub fn sync_remesh_dirty_chunks_system(
 
         let mut entity_cmds = commands.entity(entity);
         entity_cmds.insert((
-            Mesh3d(mesh_handle),
             Transform::from_translation(translation),
             Visibility::default(),
             crate::culling::chunk_local_aabb(),
         ));
 
-        if let Some(ref mat) = material_res {
-            entity_cmds.insert(MeshMaterial3d(mat.material.clone()));
+        if let Some(mesh) = mesh_opt {
+            let mesh_handle = meshes.add(mesh);
+            entity_cmds.insert(Mesh3d(mesh_handle));
+            if let Some(ref mat) = material_res {
+                entity_cmds.insert(MeshMaterial3d(mat.material.clone()));
+            }
+        } else {
+            entity_cmds.remove::<Mesh3d>();
+            entity_cmds.remove::<MeshMaterial3d<StandardMaterial>>();
         }
 
         if crate::occlusion::check_chunk_solid(chunk, &registry) {
@@ -254,8 +259,11 @@ impl ChunkMeshBuilder {
         ]);
     }
 
-    /// Converts accumulated geometry into a Bevy `Mesh`.
-    pub fn build(self) -> Mesh {
+    /// Converts accumulated geometry into a Bevy `Mesh`, returning None if no faces were added.
+    pub fn build(self) -> Option<Mesh> {
+        if self.positions.is_empty() {
+            return None;
+        }
         let mut mesh = Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
@@ -264,7 +272,7 @@ impl ChunkMeshBuilder {
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
         mesh.insert_indices(Indices::U32(self.indices));
-        mesh
+        Some(mesh)
     }
 
     /// Returns the number of quad faces currently queued in the builder.
@@ -322,6 +330,7 @@ where
 }
 
 /// Builds a 3D mesh for a single chunk, culling faces against opaque neighbors.
+/// Returns None if the chunk has no exposed faces (e.g. completely air or fully buried underground).
 ///
 /// # Arguments
 /// * `pos` - Position of the chunk.
@@ -339,14 +348,14 @@ where
 /// chunk.set_block(0, 0, 0, BlockId(1));
 /// let registry = BlockRegistry::with_defaults();
 /// let mesh = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry);
-/// assert!(mesh.indices().is_some());
+/// assert!(mesh.is_some());
 /// ```
 pub fn build_chunk_mesh<'a, F>(
     pos: ChunkPos,
     chunk: &Chunk,
     get_chunk: &F,
     registry: &BlockRegistry,
-) -> Mesh
+) -> Option<Mesh>
 where
     F: Fn(ChunkPos) -> Option<&'a Chunk>,
 {

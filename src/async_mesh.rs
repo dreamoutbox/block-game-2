@@ -53,7 +53,7 @@ pub struct RequeueRemesh;
 
 /// Component holding an in-flight background mesh generation task.
 #[derive(Component)]
-pub struct ComputeMeshTask(pub Task<Mesh>);
+pub struct ComputeMeshTask(pub Task<Option<Mesh>>);
 
 /// Self-contained immutable snapshot of a chunk and its 6 immediate orthogonal neighbors.
 /// Safe to transfer across threads without live borrowing from the ECS world.
@@ -105,6 +105,7 @@ impl ChunkSnapshot {
     }
 
     /// Computes the mesh for this snapshot using the provided block registry.
+    /// Returns None if the chunk contains no exposed faces.
     ///
     /// # Arguments
     /// * `registry` - Block descriptor registry for face culling and UVs.
@@ -125,9 +126,9 @@ impl ChunkSnapshot {
     /// };
     /// let registry = BlockRegistry::with_defaults();
     /// let mesh = snapshot.build_mesh(&registry);
-    /// assert!(mesh.indices().is_some());
+    /// assert!(mesh.is_some());
     /// ```
-    pub fn build_mesh(&self, registry: &BlockRegistry) -> Mesh {
+    pub fn build_mesh(&self, registry: &BlockRegistry) -> Option<Mesh> {
         let get_chunk = |neighbor_pos: ChunkPos| -> Option<&Chunk> {
             let offset = neighbor_pos.0 - self.pos.0;
             for (idx, face) in BlockFace::ALL.iter().enumerate() {
@@ -250,8 +251,7 @@ pub fn poll_mesh_tasks_system(
 ) {
     for (entity, &pos, chunk, mut task_comp, requeue) in tasks.iter_mut() {
         if task_comp.0.is_finished() {
-            let mesh = block_on(&mut task_comp.0);
-            let mesh_handle = meshes.add(mesh);
+            let mesh_opt = block_on(&mut task_comp.0);
 
             let translation = Vec3::new(
                 (pos.0.x * CHUNK_SIZE_I32) as f32,
@@ -262,14 +262,20 @@ pub fn poll_mesh_tasks_system(
             let mut entity_cmds = commands.entity(entity);
             entity_cmds.remove::<ComputeMeshTask>();
             entity_cmds.insert((
-                Mesh3d(mesh_handle),
                 Transform::from_translation(translation),
                 Visibility::default(),
                 crate::culling::chunk_local_aabb(),
             ));
 
-            if let Some(ref mat) = material_res {
-                entity_cmds.insert(MeshMaterial3d(mat.material.clone()));
+            if let Some(mesh) = mesh_opt {
+                let mesh_handle = meshes.add(mesh);
+                entity_cmds.insert(Mesh3d(mesh_handle));
+                if let Some(ref mat) = material_res {
+                    entity_cmds.insert(MeshMaterial3d(mat.material.clone()));
+                }
+            } else {
+                entity_cmds.remove::<Mesh3d>();
+                entity_cmds.remove::<MeshMaterial3d<StandardMaterial>>();
             }
 
             if crate::occlusion::check_chunk_solid(chunk, &registry) {

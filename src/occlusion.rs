@@ -123,15 +123,35 @@ where
     false
 }
 
+/// Timer throttling occlusion culling checks (10 Hz) to avoid CPU spikes.
+#[derive(Resource, Debug)]
+pub struct OcclusionCullingTimer(pub Timer);
+
+impl Default for OcclusionCullingTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(0.1, TimerMode::Repeating))
+    }
+}
+
 /// System testing frustum-visible chunks for raycast occlusion against intervening solid chunks.
+#[allow(clippy::too_many_arguments)]
 pub fn occlusion_culling_system(
+    time: Option<Res<Time>>,
     mut commands: Commands,
     camera_query: Query<(&GlobalTransform, Option<&Frustum>), With<Camera3d>>,
     chunks: Query<(Entity, &ChunkPos, Option<&OccludedChunk>)>,
     solid_chunks: Query<&SolidChunk>,
     voxel_world: Res<VoxelWorld>,
     enabled: Option<Res<OcclusionCullingEnabled>>,
+    timer_res: Option<ResMut<OcclusionCullingTimer>>,
 ) {
+    if let (Some(mut timer), Some(time)) = (timer_res, time) {
+        timer.0.tick(time.delta());
+        if !timer.0.just_finished() {
+            return;
+        }
+    }
+
     let is_enabled = enabled.map(|e| e.0).unwrap_or(true);
 
     if !is_enabled {

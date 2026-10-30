@@ -56,6 +56,7 @@ pub fn fly_camera_controller_system(
     key_input: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
     cursor_query: Query<&bevy::window::CursorOptions, With<PrimaryWindow>>,
+    game_settings: Option<Res<crate::settings::GameSettings>>,
     mut camera_query: Query<(&mut Transform, &mut FlyCamera)>,
 ) {
     let Ok(cursor) = cursor_query.single() else {
@@ -63,12 +64,17 @@ pub fn fly_camera_controller_system(
     };
 
     let is_locked = cursor.grab_mode == CursorGrabMode::Locked;
+    let (base_speed, fast_mult, sensitivity) = if let Some(ref gs) = game_settings {
+        (gs.fly_speed, gs.fly_fast_multiplier, gs.mouse_sensitivity)
+    } else {
+        (20.0, 2.5, 0.003)
+    };
 
     for (mut transform, mut fly_cam) in camera_query.iter_mut() {
         // Mouse look when cursor is grabbed
         if is_locked && mouse_motion.delta != Vec2::ZERO {
-            fly_cam.yaw -= mouse_motion.delta.x * fly_cam.sensitivity;
-            fly_cam.pitch = (fly_cam.pitch - mouse_motion.delta.y * fly_cam.sensitivity)
+            fly_cam.yaw -= mouse_motion.delta.x * sensitivity;
+            fly_cam.pitch = (fly_cam.pitch - mouse_motion.delta.y * sensitivity)
                 .clamp(-1.55, 1.55); // Clamped to ~89 degrees
 
             transform.rotation =
@@ -77,11 +83,11 @@ pub fn fly_camera_controller_system(
 
         // Minecraft creative mode fly movement
         let speed_multiplier = if key_input.pressed(KeyCode::ControlLeft) {
-            fly_cam.fast_multiplier
+            fast_mult
         } else {
             1.0
         };
-        let current_speed = fly_cam.speed * speed_multiplier;
+        let current_speed = base_speed * speed_multiplier;
 
         let mut move_direction = Vec3::ZERO;
 

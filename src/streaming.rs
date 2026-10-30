@@ -6,8 +6,9 @@ use crate::chunk::{world_to_chunk_and_local, ChunkPos};
 use crate::culling::{update_render_stats_system, VoxelRenderStats};
 use crate::fly_cam::FlyCameraPlugin;
 use crate::fps::FpsOverlayPlugin;
-use crate::occlusion::{occlusion_culling_system, OcclusionCullingEnabled};
+use crate::occlusion::{occlusion_culling_system, OcclusionCullingEnabled, OcclusionCullingTimer};
 use crate::registry::BlockRegistry;
+use crate::settings::GameSettings;
 use crate::world::VoxelWorld;
 use crate::world_gen::{poll_chunk_generation_system, spawn_chunk_async, TerrainConfig, TerrainGenerator};
 
@@ -41,7 +42,8 @@ pub fn stream_chunks_around_player_system(
     mut commands: Commands,
     mut voxel_world: ResMut<VoxelWorld>,
     terrain_gen: Res<TerrainGenerator>,
-    streaming_settings: Res<WorldStreamingSettings>,
+    game_settings: Option<Res<GameSettings>>,
+    streaming_settings: Option<Res<WorldStreamingSettings>>,
     player_query: Query<&Transform, With<Player>>,
 ) {
     let Ok(player_transform) = player_query.single() else {
@@ -49,8 +51,14 @@ pub fn stream_chunks_around_player_system(
     };
 
     let (player_chunk, _) = world_to_chunk_and_local(player_transform.translation.as_ivec3());
-    let h_rad = streaming_settings.horizontal_render_distance;
-    let v_rad = streaming_settings.vertical_render_distance;
+    let (h_rad, v_rad, unload_margin) = if let Some(ref gs) = game_settings {
+        (gs.horizontal_render_distance, gs.vertical_render_distance, gs.unload_margin)
+    } else if let Some(ref ss) = streaming_settings {
+        (ss.horizontal_render_distance, ss.vertical_render_distance, ss.unload_margin)
+    } else {
+        let def = GameSettings::default();
+        (def.horizontal_render_distance, def.vertical_render_distance, def.unload_margin)
+    };
 
     // Load newly in-range chunks
     for dy in -v_rad..=v_rad {
@@ -70,8 +78,8 @@ pub fn stream_chunks_around_player_system(
     }
 
     // Unload chunks exceeding unload threshold
-    let max_h = h_rad + streaming_settings.unload_margin;
-    let max_v = v_rad + streaming_settings.unload_margin;
+    let max_h = h_rad + unload_margin;
+    let max_v = v_rad + unload_margin;
     let max_h_sq = max_h * max_h;
 
     let mut to_unload = Vec::new();
@@ -98,11 +106,13 @@ pub struct VoxelWorldPlugin;
 impl Plugin for VoxelWorldPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VoxelWorld>()
+            .init_resource::<GameSettings>()
             .init_resource::<WorldStreamingSettings>()
             .init_resource::<DebounceSettings>()
             .init_resource::<VoxelRenderStats>()
             .init_resource::<BatchingStats>()
             .init_resource::<OcclusionCullingEnabled>()
+            .init_resource::<OcclusionCullingTimer>()
             .insert_resource(BlockRegistry::with_defaults())
             .insert_resource(TerrainGenerator::new(TerrainConfig::default()))
             .add_plugins(FpsOverlayPlugin)
