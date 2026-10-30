@@ -267,46 +267,6 @@ pub fn create_texture_atlas_image() -> Image {
     // Tile 6: Leaves (Green Foliage)
     color_tile(&mut data, 6, [46, 125, 50, 240]);
 
-    // Attempt loading Minecraft textures from assets, falling back gracefully to procedural patterns
-    if let Err(err) = load_and_blit_png(&mut data, 2, "minecraft/textures/block/dirt.png") {
-        warn!(?err, "Failed to load dirt block texture; falling back to procedural color");
-    }
-
-    match load_png_rgba("minecraft/textures/block/grass_block_side.png") {
-        Ok(mut side_img) => {
-            if let Ok(mut overlay_img) =
-                load_png_rgba("minecraft/textures/block/grass_block_side_overlay.png")
-            {
-                tint_rgba_image(&mut overlay_img, MINECRAFT_GRASS_TINT);
-                composite_rgba_image(&mut side_img, &overlay_img);
-            }
-            if let Err(err) = blit_tile_rgba(&mut data, 3, side_img.as_raw()) {
-                warn!(?err, "Failed to blit grass side texture");
-            }
-        }
-        Err(err) => {
-            warn!(
-                ?err,
-                "Failed to load grass block side texture; falling back to procedural color"
-            );
-        }
-    }
-
-    match load_png_rgba("minecraft/textures/block/grass_block_top.png") {
-        Ok(mut top_img) => {
-            tint_rgba_image(&mut top_img, MINECRAFT_GRASS_TINT);
-            if let Err(err) = blit_tile_rgba(&mut data, 4, top_img.as_raw()) {
-                warn!(?err, "Failed to blit grass top texture");
-            }
-        }
-        Err(err) => {
-            warn!(
-                ?err,
-                "Failed to load grass block top texture; falling back to procedural color"
-            );
-        }
-    }
-
     Image::new(
         Extent3d {
             width: ATLAS_PIXEL_SIZE,

@@ -1,5 +1,8 @@
 use bevy::prelude::*;
 
+use crate::asset_texture_loader::{
+    setup_asset_texture_loader_system, update_atlas_from_asset_server_system,
+};
 use crate::async_mesh::{poll_mesh_tasks_system, queue_async_remesh_system, DebounceSettings};
 use crate::batching::{setup_voxel_material_system, update_batching_stats_system, BatchingStats};
 use crate::chunk::{world_to_chunk_and_local, ChunkPos};
@@ -117,7 +120,10 @@ impl Plugin for VoxelWorldPlugin {
             .insert_resource(TerrainGenerator::new(TerrainConfig::default()))
             .add_plugins(FpsOverlayPlugin)
             .add_plugins(FlyCameraPlugin)
-            .add_systems(Startup, setup_voxel_material_system)
+            .add_systems(
+                Startup,
+                (setup_voxel_material_system, setup_asset_texture_loader_system),
+            )
             .add_systems(
                 Update,
                 (
@@ -126,6 +132,7 @@ impl Plugin for VoxelWorldPlugin {
                     queue_async_remesh_system,
                     poll_mesh_tasks_system,
                     occlusion_culling_system,
+                    update_atlas_from_asset_server_system,
                     update_render_stats_system,
                     update_batching_stats_system,
                 )

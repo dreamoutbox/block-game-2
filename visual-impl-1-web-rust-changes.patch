@@ -1,0 +1,329 @@
+diff --git a/src/asset_texture_loader.rs b/src/asset_texture_loader.rs
+new file mode 100644
+index 0000000..252f259
+--- /dev/null
++++ b/src/asset_texture_loader.rs
+@@ -0,0 +1,133 @@
++use bevy::prelude::*;
++use crate::mesh::{
++    blit_tile_rgba, composite_rgba_image, tint_rgba_image, VoxelMaterialHandle,
++    MINECRAFT_GRASS_TINT,
++};
++
++/// Resource managing asynchronous loading of block textures via Bevy's [`AssetServer`].
++#[derive(Resource, Debug, Clone)]
++pub struct AssetTextureLoader {
++    /// Handle for the base dirt block texture.
++    pub dirt: Handle<Image>,
++    /// Handle for the grass block side texture.
++    pub grass_side: Handle<Image>,
++    /// Handle for the grass block side foliage overlay texture.
++    pub grass_side_overlay: Handle<Image>,
++    /// Handle for the grass block top texture.
++    pub grass_top: Handle<Image>,
++    /// Flag indicating whether textures have been loaded and blitted into the atlas.
++    pub is_loaded: bool,
++}
++
++impl AssetTextureLoader {
++    /// Creates a new texture loader and initiates asynchronous asset requests.
++    ///
++    /// # Arguments
++    /// * `asset_server` - Reference to Bevy's asset server used to request textures.
++    ///
++    /// # Example
++    /// ```rust,no_run
++    /// use bevy::prelude::*;
++    /// use block_game_2::asset_texture_loader::AssetTextureLoader;
++    ///
++    /// fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
++    ///     commands.insert_resource(AssetTextureLoader::new(&asset_server));
++    /// }
++    /// ```
++    pub fn new(asset_server: &AssetServer) -> Self {
++        Self {
++            dirt: asset_server.load("minecraft/textures/block/dirt.png"),
++            grass_side: asset_server.load("minecraft/textures/block/grass_block_side.png"),
++            grass_side_overlay: asset_server
++                .load("minecraft/textures/block/grass_block_side_overlay.png"),
++            grass_top: asset_server.load("minecraft/textures/block/grass_block_top.png"),
++            is_loaded: false,
++        }
++    }
++}
++
++/// System initializing texture loading during startup.
++///
++/// # Arguments
++/// * `commands` - Entity and resource commands.
++/// * `asset_server` - Bevy asset server resource.
++pub fn setup_asset_texture_loader_system(
++    mut commands: Commands,
++    asset_server: Res<AssetServer>,
++) {
++    commands.insert_resource(AssetTextureLoader::new(&asset_server));
++}
++
++/// System checking whether all block textures have loaded from the asset server,
++/// then blitting them into the shared voxel texture atlas.
++///
++/// # Arguments
++/// * `loader` - Optional texture loader resource.
++/// * `asset_server` - Asset server resource checking load state.
++/// * `material_handle` - Optional handle to the shared atlas material and image.
++/// * `images` - Image asset storage.
++pub fn update_atlas_from_asset_server_system(
++    loader: Option<ResMut<AssetTextureLoader>>,
++    material_handle: Option<Res<VoxelMaterialHandle>>,
++    mut images: ResMut<Assets<Image>>,
++) {
++    let Some(mut loader) = loader else { return; };
++    if loader.is_loaded {
++        return;
++    }
++    let Some(material_handle) = material_handle else { return; };
++
++    // Wait until all 4 textures are loaded and available in Assets<Image>
++    let (Some(dirt_img), Some(side_img), Some(overlay_img), Some(top_img)) = (
++        images.get(&loader.dirt),
++        images.get(&loader.grass_side),
++        images.get(&loader.grass_side_overlay),
++        images.get(&loader.grass_top),
++    ) else {
++        return;
++    };
++
++    let Ok(dirt_dyn) = dirt_img.clone().try_into_dynamic() else {
++        warn!("Failed to convert dirt image into dynamic image");
++        return;
++    };
++    let Ok(side_dyn) = side_img.clone().try_into_dynamic() else {
++        warn!("Failed to convert grass side image into dynamic image");
++        return;
++    };
++    let Ok(overlay_dyn) = overlay_img.clone().try_into_dynamic() else {
++        warn!("Failed to convert grass side overlay image into dynamic image");
++        return;
++    };
++    let Ok(top_dyn) = top_img.clone().try_into_dynamic() else {
++        warn!("Failed to convert grass top image into dynamic image");
++        return;
++    };
++
++    let dirt_rgba = dirt_dyn.to_rgba8();
++    let mut side_rgba = side_dyn.to_rgba8();
++    let mut overlay_rgba = overlay_dyn.to_rgba8();
++    let mut top_rgba = top_dyn.to_rgba8();
++
++    // Apply Minecraft plains grass tint and composite overlay
++    tint_rgba_image(&mut overlay_rgba, MINECRAFT_GRASS_TINT);
++    composite_rgba_image(&mut side_rgba, &overlay_rgba);
++    tint_rgba_image(&mut top_rgba, MINECRAFT_GRASS_TINT);
++
++    if let Some(atlas_image) = images.get_mut(&material_handle.atlas_image) {
++        if let Some(atlas_data) = atlas_image.into_inner().data.as_mut() {
++            if let Err(err) = blit_tile_rgba(atlas_data, 2, dirt_rgba.as_raw()) {
++                warn!(?err, "Failed to blit dirt texture to atlas");
++            }
++            if let Err(err) = blit_tile_rgba(atlas_data, 3, side_rgba.as_raw()) {
++                warn!(?err, "Failed to blit grass side texture to atlas");
++            }
++            if let Err(err) = blit_tile_rgba(atlas_data, 4, top_rgba.as_raw()) {
++                warn!(?err, "Failed to blit grass top texture to atlas");
++            }
++
++            loader.is_loaded = true;
++            info!("Successfully populated voxel texture atlas from AssetServer textures");
++        }
++    }
++}
+diff --git a/src/lib.rs b/src/lib.rs
+index b815de5..1d490e5 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,4 @@
++pub mod asset_texture_loader;
+ pub mod async_mesh;
+ pub mod batching;
+ pub mod chunk;
+@@ -15,6 +16,7 @@ pub mod world_gen;
+ 
+ #[cfg(test)]
+ mod tests {
++    use super::asset_texture_loader::*;
+     use super::async_mesh::*;
+     use super::batching::*;
+     use super::chunk::*;
+@@ -807,8 +809,63 @@ mod tests {
+ 
+     #[test]
+     fn test_minecraft_grass_and_dirt_tiles_in_atlas() {
+-        let atlas_image = create_texture_atlas_image();
+-        let data = atlas_image.data.as_ref().expect("atlas image should contain pixel data");
++        let mut app = App::new();
++        app.add_plugins(bevy::asset::AssetPlugin::default());
++        app.init_resource::<Assets<StandardMaterial>>();
++        app.init_resource::<Assets<Image>>();
++
++        // Setup shared voxel material handle
++        let material_handle = app.world_mut().resource_scope(
++            |world, mut materials: Mut<Assets<StandardMaterial>>| {
++                let mut images = world.resource_mut::<Assets<Image>>();
++                init_shared_voxel_material(&mut materials, &mut images)
++            },
++        );
++        app.insert_resource(material_handle.clone());
++
++        // Decode source images and add them to Assets<Image>
++        let dirt_png = load_png_rgba("minecraft/textures/block/dirt.png").unwrap();
++        let side_png = load_png_rgba("minecraft/textures/block/grass_block_side.png").unwrap();
++        let overlay_png =
++            load_png_rgba("minecraft/textures/block/grass_block_side_overlay.png").unwrap();
++        let top_png = load_png_rgba("minecraft/textures/block/grass_block_top.png").unwrap();
++
++        let to_bevy_image = |rgba: image::RgbaImage| -> Image {
++            Image::new(
++                bevy::render::render_resource::Extent3d {
++                    width: rgba.width(),
++                    height: rgba.height(),
++                    depth_or_array_layers: 1,
++                },
++                bevy::render::render_resource::TextureDimension::D2,
++                rgba.into_raw(),
++                bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
++                bevy::asset::RenderAssetUsages::default(),
++            )
++        };
++
++        let dirt_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(dirt_png.clone()));
++        let side_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(side_png));
++        let overlay_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(overlay_png));
++        let top_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(top_png));
++
++        app.insert_resource(AssetTextureLoader {
++            dirt: dirt_handle,
++            grass_side: side_handle,
++            grass_side_overlay: overlay_handle,
++            grass_top: top_handle,
++            is_loaded: false,
++        });
++
++        app.add_systems(Update, update_atlas_from_asset_server_system);
++        app.update();
++
++        let loader = app.world().resource::<AssetTextureLoader>();
++        assert!(loader.is_loaded, "Atlas should be populated and marked loaded");
++
++        let images = app.world().resource::<Assets<Image>>();
++        let atlas = images.get(&material_handle.atlas_image).unwrap();
++        let data = atlas.data.as_ref().unwrap();
+ 
+         // Helper to extract a pixel from a tile in the atlas
+         let get_tile_pixel = |tile_idx: u32, px: u32, py: u32| -> [u8; 4] {
+@@ -821,8 +878,6 @@ mod tests {
+         };
+ 
+         // 1. Dirt tile (tile 2) should match dirt.png
+-        let dirt_png = load_png_rgba("minecraft/textures/block/dirt.png")
+-            .expect("dirt.png should be available");
+         for y in 0..TILE_PIXEL_SIZE {
+             for x in 0..TILE_PIXEL_SIZE {
+                 let atlas_pixel = get_tile_pixel(2, x, y);
+diff --git a/src/main.rs b/src/main.rs
+index c13f2b0..7239ded 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -10,6 +10,9 @@ fn main() {
+         .add_plugins(DefaultPlugins.set(WindowPlugin {
+             primary_window: Some(Window {
+                 title: "Voxel Engine (Minecraft Creative Fly & Minetest Techniques)".into(),
++                // Resize the canvas with the browser page (no-op on desktop).
++                fit_canvas_to_parent: true,
++                prevent_default_event_handling: true,
+                 ..default()
+             }),
+             ..default()
+diff --git a/src/mesh.rs b/src/mesh.rs
+index d83e6e3..ceccd6a 100644
+--- a/src/mesh.rs
++++ b/src/mesh.rs
+@@ -267,46 +267,6 @@ pub fn create_texture_atlas_image() -> Image {
+     // Tile 6: Leaves (Green Foliage)
+     color_tile(&mut data, 6, [46, 125, 50, 240]);
+ 
+-    // Attempt loading Minecraft textures from assets, falling back gracefully to procedural patterns
+-    if let Err(err) = load_and_blit_png(&mut data, 2, "minecraft/textures/block/dirt.png") {
+-        warn!(?err, "Failed to load dirt block texture; falling back to procedural color");
+-    }
+-
+-    match load_png_rgba("minecraft/textures/block/grass_block_side.png") {
+-        Ok(mut side_img) => {
+-            if let Ok(mut overlay_img) =
+-                load_png_rgba("minecraft/textures/block/grass_block_side_overlay.png")
+-            {
+-                tint_rgba_image(&mut overlay_img, MINECRAFT_GRASS_TINT);
+-                composite_rgba_image(&mut side_img, &overlay_img);
+-            }
+-            if let Err(err) = blit_tile_rgba(&mut data, 3, side_img.as_raw()) {
+-                warn!(?err, "Failed to blit grass side texture");
+-            }
+-        }
+-        Err(err) => {
+-            warn!(
+-                ?err,
+-                "Failed to load grass block side texture; falling back to procedural color"
+-            );
+-        }
+-    }
+-
+-    match load_png_rgba("minecraft/textures/block/grass_block_top.png") {
+-        Ok(mut top_img) => {
+-            tint_rgba_image(&mut top_img, MINECRAFT_GRASS_TINT);
+-            if let Err(err) = blit_tile_rgba(&mut data, 4, top_img.as_raw()) {
+-                warn!(?err, "Failed to blit grass top texture");
+-            }
+-        }
+-        Err(err) => {
+-            warn!(
+-                ?err,
+-                "Failed to load grass block top texture; falling back to procedural color"
+-            );
+-        }
+-    }
+-
+     Image::new(
+         Extent3d {
+             width: ATLAS_PIXEL_SIZE,
+diff --git a/src/streaming.rs b/src/streaming.rs
+index 1a78d2e..e0624b7 100644
+--- a/src/streaming.rs
++++ b/src/streaming.rs
+@@ -1,5 +1,8 @@
+ use bevy::prelude::*;
+ 
++use crate::asset_texture_loader::{
++    setup_asset_texture_loader_system, update_atlas_from_asset_server_system,
++};
+ use crate::async_mesh::{poll_mesh_tasks_system, queue_async_remesh_system, DebounceSettings};
+ use crate::batching::{setup_voxel_material_system, update_batching_stats_system, BatchingStats};
+ use crate::chunk::{world_to_chunk_and_local, ChunkPos};
+@@ -117,7 +120,10 @@ impl Plugin for VoxelWorldPlugin {
+             .insert_resource(TerrainGenerator::new(TerrainConfig::default()))
+             .add_plugins(FpsOverlayPlugin)
+             .add_plugins(FlyCameraPlugin)
+-            .add_systems(Startup, setup_voxel_material_system)
++            .add_systems(
++                Startup,
++                (setup_voxel_material_system, setup_asset_texture_loader_system),
++            )
+             .add_systems(
+                 Update,
+                 (
+@@ -126,6 +132,7 @@ impl Plugin for VoxelWorldPlugin {
+                     queue_async_remesh_system,
+                     poll_mesh_tasks_system,
+                     occlusion_culling_system,
++                    update_atlas_from_asset_server_system,
+                     update_render_stats_system,
+                     update_batching_stats_system,
+                 )
