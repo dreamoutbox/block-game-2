@@ -3,19 +3,21 @@ use bevy::prelude::*;
 use crate::asset_texture_loader::{
     setup_asset_texture_loader_system, update_atlas_from_asset_server_system,
 };
-use crate::async_mesh::{poll_mesh_tasks_system, queue_async_remesh_system, DebounceSettings};
-use crate::batching::{setup_voxel_material_system, update_batching_stats_system, BatchingStats};
-use crate::chunk::{world_to_chunk_and_local, ChunkPos};
-use crate::culling::{update_render_stats_system, VoxelRenderStats};
-use crate::fly_cam::FlyCameraPlugin;
+use crate::async_mesh::{DebounceSettings, poll_mesh_tasks_system, queue_async_remesh_system};
+use crate::batching::{BatchingStats, setup_voxel_material_system, update_batching_stats_system};
 use crate::block_edit::BlockEditPlugin;
-use crate::hotbar::HotbarPlugin;
+use crate::chunk::{ChunkPos, world_to_chunk_and_local};
+use crate::culling::{VoxelRenderStats, update_render_stats_system};
+use crate::fly_cam::FlyCameraPlugin;
 use crate::fps::FpsOverlayPlugin;
-use crate::occlusion::{occlusion_culling_system, OcclusionCullingEnabled, OcclusionCullingTimer};
+use crate::hotbar::HotbarPlugin;
+use crate::occlusion::{OcclusionCullingEnabled, OcclusionCullingTimer, occlusion_culling_system};
 use crate::registry::BlockRegistry;
 use crate::settings::GameSettings;
 use crate::world::VoxelWorld;
-use crate::world_gen::{poll_chunk_generation_system, spawn_chunk_async, TerrainConfig, TerrainGenerator};
+use crate::world_gen::{
+    TerrainConfig, TerrainGenerator, poll_chunk_generation_system, spawn_chunk_async,
+};
 
 /// Settings controlling streaming radius and unloading hysteresis around the viewer.
 #[derive(Resource, Clone, Copy, Debug)]
@@ -57,12 +59,24 @@ pub fn stream_chunks_around_player_system(
 
     let (player_chunk, _) = world_to_chunk_and_local(player_transform.translation.as_ivec3());
     let (h_rad, v_rad, unload_margin) = if let Some(ref gs) = game_settings {
-        (gs.horizontal_render_distance, gs.vertical_render_distance, gs.unload_margin)
+        (
+            gs.horizontal_render_distance,
+            gs.vertical_render_distance,
+            gs.unload_margin,
+        )
     } else if let Some(ref ss) = streaming_settings {
-        (ss.horizontal_render_distance, ss.vertical_render_distance, ss.unload_margin)
+        (
+            ss.horizontal_render_distance,
+            ss.vertical_render_distance,
+            ss.unload_margin,
+        )
     } else {
         let def = GameSettings::default();
-        (def.horizontal_render_distance, def.vertical_render_distance, def.unload_margin)
+        (
+            def.horizontal_render_distance,
+            def.vertical_render_distance,
+            def.unload_margin,
+        )
     };
 
     // Load newly in-range chunks
@@ -126,7 +140,10 @@ impl Plugin for VoxelWorldPlugin {
             .add_plugins(HotbarPlugin)
             .add_systems(
                 Startup,
-                (setup_voxel_material_system, setup_asset_texture_loader_system),
+                (
+                    setup_voxel_material_system,
+                    setup_asset_texture_loader_system,
+                ),
             )
             .add_systems(
                 Update,
