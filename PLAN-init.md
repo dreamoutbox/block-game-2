@@ -16,14 +16,14 @@ fit for frequently-edited voxel worlds).
   - [x] Unit tests: block get/set, chunk↔world coord conversion, dirty flag lifecycle
 - Done when: chunks can be created, edited, and queried in isolation (no rendering yet); `cargo test` green.
 
-## Phase 2: World generation [STATUS: TODO]
+## Phase 2: World generation [STATUS: DONE]
 - Goal: procedurally populate chunks so later phases have a real world to render/cull, not hand-stubbed data.
 - Tasks:
-  - [ ] Noise-based heightmap generator (e.g. `noise` crate, FBM/Perlin) → terrain surface per column
-  - [ ] Column → block-column fill rule (stone below surface, dirt/grass near surface, air above)
-  - [ ] Generator runs per-chunk, keyed by `ChunkPos`, pure function of world seed (deterministic, no shared mutable state — needed for later async generation)
-  - [ ] Wire into chunk load path: chunk spawn triggers generation if not already in world storage
-  - [ ] Unit tests: determinism (same seed+pos → same chunk), surface continuity across chunk boundaries (no seams)
+  - [x] Noise-based heightmap generator (e.g. `noise` crate, FBM/Perlin) → terrain surface per column
+  - [x] Column → block-column fill rule (stone below surface, dirt/grass near surface, air above)
+  - [x] Generator runs per-chunk, keyed by `ChunkPos`, pure function of world seed (deterministic, no shared mutable state — needed for later async generation)
+  - [x] Wire into chunk load path: chunk spawn triggers generation if not already in world storage
+  - [x] Unit tests: determinism (same seed+pos → same chunk), surface continuity across chunk boundaries (no seams)
 - Done when: a multi-chunk area generates deterministically from a seed with continuous terrain across chunk borders; `cargo test` green.
 
 ## Phase 3: Naive mesher + static rendering [STATUS: TODO]
