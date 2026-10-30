@@ -24,10 +24,10 @@ impl Default for GameSettings {
     fn default() -> Self {
         Self {
             // Adjust this value to increase or decrease render distance
-            horizontal_render_distance: 4,
-            vertical_render_distance: 2,
+            horizontal_render_distance: 8,
+            vertical_render_distance: 6,
             unload_margin: 1,
-            fly_speed: 24.0,
+            fly_speed: 30.0,
             fly_fast_multiplier: 2.5,
             mouse_sensitivity: 0.003,
             shadows_enabled: true,
