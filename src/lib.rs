@@ -5,6 +5,7 @@ pub mod culling;
 pub mod mesh;
 pub mod occlusion;
 pub mod registry;
+pub mod streaming;
 pub mod world;
 pub mod world_gen;
 
@@ -17,6 +18,7 @@ mod tests {
     use super::mesh::*;
     use super::occlusion::*;
     use super::registry::*;
+    use super::streaming::*;
     use super::world::*;
     use super::world_gen::*;
     use bevy::prelude::*;
@@ -593,5 +595,106 @@ mod tests {
         assert_eq!(stats_after.total_material_entities, 4);
         assert_eq!(stats_after.unique_materials, 2);
         assert!(!stats_after.is_batch_optimal);
+    }
+
+    #[test]
+    fn test_streaming_chunks_around_player() {
+        let mut app = App::new();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(TerrainGenerator::new(TerrainConfig::default()));
+        app.insert_resource(WorldStreamingSettings {
+            horizontal_render_distance: 1,
+            vertical_render_distance: 0,
+            unload_margin: 1,
+        });
+        app.add_systems(Update, stream_chunks_around_player_system);
+
+        // Spawn player at world origin
+        let player_entity = app.world_mut().spawn((
+            Player,
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        )).id();
+
+        app.update();
+
+        let initial_count = app.world().resource::<VoxelWorld>().len();
+        // At radius 1, horizontally dx=-1..=1, dz=-1..=1 where dx^2+dz^2 <= 1 => (0,0), (1,0), (-1,0), (0,1), (0,-1) = 5 chunks
+        assert_eq!(initial_count, 5);
+
+        // Move player far along X to (100.0, 0.0, 0.0)
+        app.world_mut().entity_mut(player_entity).insert(Transform::from_xyz(100.0, 0.0, 0.0));
+        app.update();
+
+        let moved_count = app.world().resource::<VoxelWorld>().len();
+        // The old chunks outside the margin should be unloaded, and new ones loaded around (6, 0, 0)
+        assert_eq!(moved_count, 5);
+        assert!(!app.world().resource::<VoxelWorld>().contains(&ChunkPos::new(0, 0, 0)));
+        assert!(app.world().resource::<VoxelWorld>().contains(&ChunkPos::new(6, 0, 0)));
+    }
+
+    #[test]
+    fn test_streaming_and_meshing_pipeline_stress() {
+        let mut app = App::new();
+        bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+        app.init_resource::<Assets<Mesh>>();
+        app.init_resource::<Assets<StandardMaterial>>();
+        app.init_resource::<Assets<Image>>();
+        app.init_resource::<VoxelWorld>();
+        app.init_resource::<WorldStreamingSettings>();
+        app.init_resource::<DebounceSettings>();
+        app.init_resource::<VoxelRenderStats>();
+        app.init_resource::<BatchingStats>();
+        app.init_resource::<OcclusionCullingEnabled>();
+        app.insert_resource(BlockRegistry::with_defaults());
+        app.insert_resource(TerrainGenerator::new(TerrainConfig::default()));
+
+        // Setup material
+        app.world_mut().resource_scope(|world, mut materials: Mut<Assets<StandardMaterial>>| {
+            let mut images = world.resource_mut::<Assets<Image>>();
+            let handle = init_shared_voxel_material(&mut materials, &mut images);
+            world.insert_resource(handle);
+        });
+
+        app.add_systems(
+            Update,
+            (
+                stream_chunks_around_player_system,
+                queue_async_remesh_system,
+                poll_mesh_tasks_system,
+                occlusion_culling_system,
+                update_render_stats_system,
+                update_batching_stats_system,
+            )
+                .chain(),
+        );
+
+        // Spawn player with Camera3d
+        let player = app.world_mut().spawn((
+            Player,
+            Camera3d::default(),
+            Transform::from_xyz(0.0, 16.0, 0.0),
+            GlobalTransform::from_xyz(0.0, 16.0, 0.0),
+        )).id();
+
+        // Simulate flight through terrain over 15 steps
+        for step in 0..15 {
+            let x_pos = (step as f32) * 16.0;
+            app.world_mut().entity_mut(player).insert((
+                Transform::from_xyz(x_pos, 16.0, 0.0),
+                GlobalTransform::from_xyz(x_pos, 16.0, 0.0),
+            ));
+            app.update();
+            std::thread::sleep(std::time::Duration::from_millis(15));
+            app.update();
+        }
+
+        let world_chunks = app.world().resource::<VoxelWorld>().len();
+        // Loaded chunk count must remain bounded (no unbounded growth or leak)
+        assert!(world_chunks > 0 && world_chunks <= 150, "Chunk count out of bounds: {world_chunks}");
+
+        // Confirm batching remains optimal
+        let batch_stats = *app.world().resource::<BatchingStats>();
+        assert!(batch_stats.is_batch_optimal);
+        assert_eq!(batch_stats.unique_materials, 1);
     }
 }

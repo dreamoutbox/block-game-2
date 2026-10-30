@@ -72,12 +72,12 @@ fit for frequently-edited voxel worlds).
   - [x] If using `bevy_render` custom pipeline for voxel chunks (optional), batch draw calls by material/pipeline key explicitly
 - Done when: diagnostics show draw calls roughly proportional to visible chunks, not visible faces/blocks, with a single material bound across the world.
 
-## Phase 8: Integration + load/stream loop [STATUS: TODO]
+## Phase 8: Integration + load/stream loop [STATUS: DONE]
 - Goal: tie chunking + generation + meshing + culling together into a working streaming world (load/unload chunks around player).
 - Tasks:
-  - [ ] Chunk load/unload system based on player position + render distance
-  - [ ] Wire generate-on-load (Phase 2) → dirty → async mesh (Phase 4) → cull (Phase 5/6) → batched draw (Phase 7)
-  - [ ] Stress test: fly through generated terrain, confirm stable frame time and bounded chunk entity count
+  - [x] Chunk load/unload system based on player position + render distance
+  - [x] Wire generate-on-load (Phase 2) → dirty → async mesh (Phase 4) → cull (Phase 5/6) → batched draw (Phase 7)
+  - [x] Stress test: fly through generated terrain, confirm stable frame time and bounded chunk entity count
 - Done when: player can move through a procedurally generated world with chunks streaming in/out, stable FPS, no leaked entities (chunk count matches render-distance expectation after movement).
 
 ## Unknowns, risks, assumptions
