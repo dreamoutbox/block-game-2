@@ -9,14 +9,14 @@ Requests (deduped, dependency-ordered):
 Context: atlas is procedural in [mesh.rs](src/mesh.rs) (`create_texture_atlas_image`, 4x4 tiles of 16px, nearest sampling set in [batching.rs](src/batching.rs)). Tile indices set in [registry.rs](src/registry.rs) (dirt = 2, grass side = 3, grass top = 4). Camera/light spawned in [main.rs](src/main.rs); no clear color set. Source PNGs are 64x64 (Faithful pack), indexed-color. `assets/` is already in the repo root.
 Test command: `cargo nextest run --test-threads 1 --fail-fast`.
 
-### Phase 1: 64px atlas built from PNG files [STATUS: TODO]
+### Phase 1: 64px atlas built from PNG files [STATUS: DONE]
 - Goal: atlas tiles are 64px and can be filled from a PNG on disk, with other blocks keeping their flat colors.
 - Tasks:
-  - [ ] Set `TILE_PIXEL_SIZE` to 64 (atlas becomes 256x256); keep flat-color tiles filling the larger tile size
-  - [ ] Add a shared helper that decodes a PNG (path relative to `assets/`) to RGBA8 and blits it into a given tile index; return a typed error (`thiserror`) on missing file or wrong size, no `unwrap`
-  - [ ] Decide load mechanism (see risks): synchronous decode at startup so the atlas stays a single ready `Image`
-  - [ ] Update tests and doctests asserting 64x64 atlas size (`mesh.rs` doc, `lib.rs` atlas test) to 256x256
-  - [ ] Unit test: blitting a known PNG puts its first pixel at the tile's top-left atlas pixel
+  - [x] Set `TILE_PIXEL_SIZE` to 64 (atlas becomes 256x256); keep flat-color tiles filling the larger tile size
+  - [x] Add a shared helper that decodes a PNG (path relative to `assets/`) to RGBA8 and blits it into a given tile index; return a typed error (`thiserror`) on missing file or wrong size, no `unwrap`
+  - [x] Decide load mechanism (see risks): synchronous decode at startup so the atlas stays a single ready `Image`
+  - [x] Update tests and doctests asserting 64x64 atlas size (`mesh.rs` doc, `lib.rs` atlas test) to 256x256
+  - [x] Unit test: blitting a known PNG puts its first pixel at the tile's top-left atlas pixel
 - Done when: build and all tests pass; game runs identically in layout (flat colors still shown, just a larger atlas).
 
 ### Phase 2: Dirt and grass textures [STATUS: TODO]

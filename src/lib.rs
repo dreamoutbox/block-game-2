@@ -2,6 +2,7 @@ pub mod async_mesh;
 pub mod batching;
 pub mod chunk;
 pub mod culling;
+pub mod error;
 pub mod fly_cam;
 pub mod fps;
 pub mod mesh;
@@ -18,6 +19,7 @@ mod tests {
     use super::batching::*;
     use super::chunk::*;
     use super::culling::*;
+    use super::error::*;
     use super::fly_cam::*;
     use super::fps::*;
     use super::mesh::*;
@@ -770,5 +772,35 @@ mod tests {
         let mut query = app.world_mut().query_filtered::<&Text, With<FpsText>>();
         let text = query.single(app.world()).unwrap();
         assert!(text.0.contains("Chunks: 0 (Vis: 7, Culled: 3)"));
+    }
+
+    #[test]
+    fn test_atlas_blit_and_png_loading() {
+        let mut atlas_data = vec![0u8; (ATLAS_PIXEL_SIZE * ATLAS_PIXEL_SIZE * 4) as usize];
+        let tile_index = 2;
+        load_and_blit_png(&mut atlas_data, tile_index, "minecraft/textures/block/dirt.png")
+            .expect("should load and blit dirt texture");
+
+        let col = tile_index % ATLAS_TILES_PER_ROW;
+        let row = tile_index / ATLAS_TILES_PER_ROW;
+        let start_x = col * TILE_PIXEL_SIZE;
+        let start_y = row * TILE_PIXEL_SIZE;
+        let start_idx = ((start_y * ATLAS_PIXEL_SIZE + start_x) * 4) as usize;
+
+        let dirt_img = load_png_rgba("minecraft/textures/block/dirt.png").unwrap();
+        let expected_first_pixel = dirt_img.get_pixel(0, 0).0;
+
+        assert_eq!(
+            &atlas_data[start_idx..start_idx + 4],
+            &expected_first_pixel[..]
+        );
+
+        // Out of bounds tile index should return error
+        let err = load_and_blit_png(&mut atlas_data, 16, "minecraft/textures/block/dirt.png");
+        assert!(matches!(err, Err(AtlasError::TileIndexOutOfBounds { .. })));
+
+        // Missing file should return IO error
+        let missing_err = load_and_blit_png(&mut atlas_data, 0, "nonexistent.png");
+        assert!(matches!(missing_err, Err(AtlasError::Io { .. })));
     }
 }

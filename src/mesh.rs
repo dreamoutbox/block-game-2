@@ -2,23 +2,158 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use std::path::{Path, PathBuf};
 
 use crate::chunk::{Chunk, ChunkDirty, ChunkPos, CHUNK_SIZE, CHUNK_SIZE_I32};
+use crate::error::AtlasError;
 use crate::registry::{BlockFace, BlockRegistry, BlockType};
 use crate::world::VoxelWorld;
 
 pub const ATLAS_TILES_PER_ROW: u32 = 4;
-pub const TILE_PIXEL_SIZE: u32 = 16;
-pub const ATLAS_PIXEL_SIZE: u32 = ATLAS_TILES_PER_ROW * TILE_PIXEL_SIZE; // 64x64
+pub const TILE_PIXEL_SIZE: u32 = 64;
+pub const ATLAS_PIXEL_SIZE: u32 = ATLAS_TILES_PER_ROW * TILE_PIXEL_SIZE; // 256x256
 
-/// Generates a procedural 64x64 RGBA texture atlas image with distinct patterns for standard blocks.
+/// Blits a `TILE_PIXEL_SIZE x TILE_PIXEL_SIZE` RGBA pixel buffer into the atlas at the specified tile index.
+///
+/// # Arguments
+/// * `atlas_data` - Target atlas raw RGBA buffer of length `(ATLAS_PIXEL_SIZE * ATLAS_PIXEL_SIZE * 4)`.
+/// * `tile_index` - Target tile index in the atlas grid.
+/// * `tile_rgba` - Source RGBA byte slice of length `(TILE_PIXEL_SIZE * TILE_PIXEL_SIZE * 4)`.
+///
+/// # Example
+/// ```rust
+/// use block_game_2::mesh::{blit_tile_rgba, ATLAS_PIXEL_SIZE, TILE_PIXEL_SIZE};
+///
+/// let mut atlas = vec![0u8; (ATLAS_PIXEL_SIZE * ATLAS_PIXEL_SIZE * 4) as usize];
+/// let tile = vec![255u8; (TILE_PIXEL_SIZE * TILE_PIXEL_SIZE * 4) as usize];
+/// blit_tile_rgba(&mut atlas, 0, &tile).unwrap();
+/// assert_eq!(&atlas[0..4], &[255, 255, 255, 255]);
+/// ```
+pub fn blit_tile_rgba(
+    atlas_data: &mut [u8],
+    tile_index: u32,
+    tile_rgba: &[u8],
+) -> Result<(), AtlasError> {
+    let max_tiles = ATLAS_TILES_PER_ROW * ATLAS_TILES_PER_ROW;
+    if tile_index >= max_tiles {
+        return Err(AtlasError::TileIndexOutOfBounds {
+            tile_index,
+            max_tiles,
+        });
+    }
+
+    let expected_tile_bytes = (TILE_PIXEL_SIZE * TILE_PIXEL_SIZE * 4) as usize;
+    if tile_rgba.len() != expected_tile_bytes {
+        return Err(AtlasError::InvalidDimensions {
+            path: PathBuf::from(format!("tile_{tile_index}")),
+            expected_w: TILE_PIXEL_SIZE,
+            expected_h: TILE_PIXEL_SIZE,
+            actual_w: 0,
+            actual_h: 0,
+        });
+    }
+
+    let col = tile_index % ATLAS_TILES_PER_ROW;
+    let row = tile_index / ATLAS_TILES_PER_ROW;
+    let start_x = col * TILE_PIXEL_SIZE;
+    let start_y = row * TILE_PIXEL_SIZE;
+
+    for py in 0..TILE_PIXEL_SIZE {
+        let src_row_start = (py * TILE_PIXEL_SIZE * 4) as usize;
+        let src_row = &tile_rgba[src_row_start..src_row_start + (TILE_PIXEL_SIZE * 4) as usize];
+
+        let dst_y = start_y + py;
+        let dst_row_start = ((dst_y * ATLAS_PIXEL_SIZE + start_x) * 4) as usize;
+        atlas_data[dst_row_start..dst_row_start + (TILE_PIXEL_SIZE * 4) as usize]
+            .copy_from_slice(src_row);
+    }
+
+    Ok(())
+}
+
+/// Loads a PNG image from a path relative to the workspace or assets directory and decodes it to RGBA8.
+///
+/// # Arguments
+/// * `relative_path` - Path relative to the workspace `assets` directory or project root.
+///
+/// # Example
+/// ```rust
+/// use block_game_2::mesh::load_png_rgba;
+///
+/// let img = load_png_rgba("minecraft/textures/block/dirt.png").unwrap();
+/// assert_eq!(img.width(), 64);
+/// assert_eq!(img.height(), 64);
+/// ```
+pub fn load_png_rgba(relative_path: impl AsRef<Path>) -> Result<image::RgbaImage, AtlasError> {
+    let rel = relative_path.as_ref();
+    let full_path = if rel.starts_with("assets") {
+        rel.to_path_buf()
+    } else {
+        Path::new("assets").join(rel)
+    };
+
+    let img = image::ImageReader::open(&full_path)
+        .map_err(|e| AtlasError::Io {
+            path: full_path.clone(),
+            source: e,
+        })?
+        .decode()
+        .map_err(|e| AtlasError::Decode {
+            path: full_path.clone(),
+            source: e,
+        })?;
+
+    Ok(img.to_rgba8())
+}
+
+/// Loads a PNG image file from the assets directory and blits it into the specified atlas tile index.
+///
+/// # Arguments
+/// * `atlas_data` - Target atlas raw RGBA buffer of length `(ATLAS_PIXEL_SIZE * ATLAS_PIXEL_SIZE * 4)`.
+/// * `tile_index` - Target tile index in the atlas grid.
+/// * `relative_path` - Path relative to the workspace `assets` directory or project root.
+///
+/// # Example
+/// ```rust
+/// use block_game_2::mesh::{load_and_blit_png, ATLAS_PIXEL_SIZE};
+///
+/// let mut atlas = vec![0u8; (ATLAS_PIXEL_SIZE * ATLAS_PIXEL_SIZE * 4) as usize];
+/// load_and_blit_png(&mut atlas, 2, "minecraft/textures/block/dirt.png").unwrap();
+/// ```
+pub fn load_and_blit_png(
+    atlas_data: &mut [u8],
+    tile_index: u32,
+    relative_path: impl AsRef<Path>,
+) -> Result<(), AtlasError> {
+    let rel = relative_path.as_ref();
+    let img = load_png_rgba(rel)?;
+
+    if img.width() != TILE_PIXEL_SIZE || img.height() != TILE_PIXEL_SIZE {
+        let full_path = if rel.starts_with("assets") {
+            rel.to_path_buf()
+        } else {
+            Path::new("assets").join(rel)
+        };
+        return Err(AtlasError::InvalidDimensions {
+            path: full_path,
+            expected_w: TILE_PIXEL_SIZE,
+            expected_h: TILE_PIXEL_SIZE,
+            actual_w: img.width(),
+            actual_h: img.height(),
+        });
+    }
+
+    blit_tile_rgba(atlas_data, tile_index, img.as_raw())
+}
+
+/// Generates a procedural 256x256 RGBA texture atlas image with distinct patterns for standard blocks.
 ///
 /// # Example
 /// ```rust
 /// use block_game_2::mesh::create_texture_atlas_image;
 ///
 /// let image = create_texture_atlas_image();
-/// assert_eq!(image.texture_descriptor.size.width, 64);
+/// assert_eq!(image.texture_descriptor.size.width, 256);
 /// ```
 pub fn create_texture_atlas_image() -> Image {
     let mut data = vec![255u8; (ATLAS_PIXEL_SIZE * ATLAS_PIXEL_SIZE * 4) as usize];
@@ -56,7 +191,7 @@ pub fn create_texture_atlas_image() -> Image {
             let x = start_x + px;
             let y = start_y + py;
             let idx = ((y * ATLAS_PIXEL_SIZE + x) * 4) as usize;
-            if py < 4 {
+            if py < 16 {
                 data[idx..idx + 4].copy_from_slice(&[34, 139, 34, 255]); // Green top border
             } else {
                 data[idx..idx + 4].copy_from_slice(&[139, 69, 19, 255]); // Dirt base
