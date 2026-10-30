@@ -20,7 +20,9 @@
 
 - [ ] add ./assets and resource pack zip to .gitignore. remove those from github.
 
-- [ ] web WASM. save data ins IndexedDB.
+- [x] fix error in WASM egui `No fonts available until first call to Context::run()`.
 
-- [ ] multiplayer early implementation. create new git branch. play in browser (WASM) use websocket. backend server with tokio + websocket.
+- [ ] web WASM. save data in IndexedDB.
+
+- [ ] multiplayer early code implementation. create new git branch. play in browser (WASM). use websocket. backend server with tokio + websocket.
 

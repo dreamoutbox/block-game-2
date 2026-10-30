@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_egui::EguiPrimaryContextPass;
 
 use crate::game_state::AppState;
 use crate::menu::main_menu_ui::main_menu_ui_system;
@@ -11,7 +12,12 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MenuState>()
-            .add_systems(Update, main_menu_ui_system.run_if(in_state(AppState::MainMenu)))
-            .add_systems(Update, pause_menu_ui_system.run_if(in_state(AppState::Paused)));
+            .add_systems(
+                EguiPrimaryContextPass,
+                (
+                    main_menu_ui_system.run_if(in_state(AppState::MainMenu)),
+                    pause_menu_ui_system.run_if(in_state(AppState::Paused)),
+                ),
+            );
     }
 }
