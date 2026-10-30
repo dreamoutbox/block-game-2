@@ -1,6 +1,7 @@
 pub mod asset_texture_loader;
 pub mod async_mesh;
 pub mod batching;
+pub mod block_edit;
 pub mod chunk;
 pub mod culling;
 pub mod error;

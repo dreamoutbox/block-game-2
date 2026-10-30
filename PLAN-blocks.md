@@ -11,18 +11,18 @@ Context (from repo):
 - `BlockType` / `BlockRegistry` in [registry.rs](src/registry.rs) (`is_solid`, `is_opaque`).
 - Plugin wiring in [streaming.rs](src/streaming.rs) (`VoxelWorldPlugin`); `main.rs` only spawns scene.
 - GUI sprites available: `assets/minecraft/textures/gui/sprites/hud/hotbar.png`, `hotbar_selection.png`. Block icons are not available as 2D files; use the atlas tiles (top/side) or a flat-color/face-texture swatch.
-- Test command: `cargo nextest run --test-threads 1 --fail-fast`. Doctests: `cargo test --doc`.
+- Test command: `cargo nextest run --test-threads 1 --fail-fast`.
 - New types go in their own file (AGENTS.md); `mod.rs` only wiring.
 
-### Phase 1: World block edit API [STATUS: TODO]
+### Phase 1: World block edit API [STATUS: DONE]
 - Goal: set/get a block by world coordinate and trigger correct remeshing, without any input yet.
 - Tasks:
-  - [ ] Add a shared helper (new module, e.g. `block_edit`) to read a block at `IVec3` world pos across chunks (via `VoxelWorld` + `Query<&Chunk>`), returning `None` for unloaded chunks
-  - [ ] Add a helper to write a block at world pos: mutate `Chunk`, call `request_chunk_remesh` for the chunk
-  - [ ] When the local coord is on a chunk border (0 or max), also remesh the adjacent chunk(s) on that axis if loaded
-  - [ ] Typed error (`thiserror`) for unloaded chunk / out-of-range, no `unwrap`
-  - [ ] Doc comments with args and example usage
-  - [ ] Unit tests (`_test.rs`): edit inside a chunk marks it dirty; edit on border marks neighbor dirty; unloaded chunk returns error
+  - [x] Add a shared helper (new module, e.g. `block_edit`) to read a block at `IVec3` world pos across chunks (via `VoxelWorld` + `Query<&Chunk>`), returning `None` for unloaded chunks
+  - [x] Add a helper to write a block at world pos: mutate `Chunk`, call `request_chunk_remesh` for the chunk
+  - [x] When the local coord is on a chunk border (0 or max), also remesh the adjacent chunk(s) on that axis if loaded
+  - [x] Typed error (`thiserror`) for unloaded chunk / out-of-range, no `unwrap`
+  - [x] Doc comments with args and example usage
+  - [x] Unit tests (`_test.rs`): edit inside a chunk marks it dirty; edit on border marks neighbor dirty; unloaded chunk returns error
 - Done when: build and all tests pass; no gameplay change yet.
 
 ### Phase 2: Voxel raycast [STATUS: TODO]
