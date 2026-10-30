@@ -5,6 +5,7 @@ use crate::block_edit::{SelectedBlock, get_block_at, set_block_at, voxel_raycast
 use crate::chunk::{BlockId, Chunk};
 use crate::collision::aabb_overlaps_block;
 use crate::fly_cam::FlyCamera;
+use crate::game_state::{in_game_or_no_state, InGameEntity};
 use crate::registry::{BlockRegistry, BlockType};
 use crate::settings::{BLOCK_REACH_DISTANCE, CAMERA_COLLIDER_HALF_EXTENTS};
 use crate::world::VoxelWorld;
@@ -20,7 +21,7 @@ impl Plugin for BlockEditPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SelectedBlock>()
             .add_systems(Startup, setup_crosshair_system)
-            .add_systems(Update, block_edit_input_system);
+            .add_systems(Update, block_edit_input_system.run_if(in_game_or_no_state));
     }
 }
 
@@ -42,6 +43,7 @@ fn setup_crosshair_system(mut commands: Commands) {
         },
         BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.8)),
         CrosshairUi,
+        InGameEntity,
     ));
 }
 

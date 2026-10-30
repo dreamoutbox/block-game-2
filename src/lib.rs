@@ -8,6 +8,7 @@ pub mod culling;
 pub mod error;
 pub mod fly_cam;
 pub mod fps;
+pub mod game_state;
 pub mod hotbar;
 pub mod mesh;
 pub mod occlusion;

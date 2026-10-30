@@ -116,6 +116,24 @@ impl VoxelWorld {
     pub fn iter(&self) -> impl Iterator<Item = (&ChunkPos, &Entity)> {
         self.chunks.iter()
     }
+
+    /// Removes and returns all tracked chunk positions and their entities.
+    ///
+    /// # Example
+    /// ```rust
+    /// use block_game_2::world::VoxelWorld;
+    /// use block_game_2::chunk::ChunkPos;
+    /// use bevy::prelude::Entity;
+    ///
+    /// let mut world = VoxelWorld::default();
+    /// world.insert(ChunkPos::new(0, 0, 0), Entity::from_bits(1));
+    /// let drained: Vec<_> = world.drain().collect();
+    /// assert_eq!(drained.len(), 1);
+    /// assert!(world.is_empty());
+    /// ```
+    pub fn drain(&mut self) -> impl Iterator<Item = (ChunkPos, Entity)> {
+        self.chunks.drain()
+    }
 }
 
 /// Marks a chunk entity as dirty by adding the `ChunkDirty` component.

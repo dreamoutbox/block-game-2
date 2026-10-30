@@ -33,14 +33,14 @@ Findings (read-only):
   - [x] Tests (using a temp dir): chunk round-trip, meta round-trip, create-existing errors, load of an edited chunk returns the edit instead of regenerated terrain
 - Done when: tests pass; a unit/integration test creates a world, edits a block, saves, reloads, and sees the edit; `cargo build --target wasm32-unknown-unknown` still compiles.
 
-### Phase 3: Game state machine and `bevy_egui` shell [STATUS: TODO]
+### Phase 3: Game state machine and `bevy_egui` shell [STATUS: DONE]
 - Goal: the app starts in a main menu; the world only exists once a world is opened.
 - Tasks:
-  - [ ] Add `bevy_egui` (version compatible with bevy 0.20; verify on crates.io, check it supports bevy 0.20 before adding)
-  - [ ] `AppState` enum: `MainMenu`, `InGame`, `Paused`; gate streaming, fly cam, block edit, hotbar systems on `InGame` via `run_if(in_state(..))`
-  - [ ] `ActiveWorld` resource (name, generator, save path), inserted on open and removed on exit; despawn all chunk entities and clear `VoxelWorld` on exit
-  - [ ] Move camera/light spawn from `main.rs` `Startup` to world-open (`OnEnter(InGame)`), and cleanup on exit
-  - [ ] Replace Esc handling in `cursor_grab_system` so Esc toggles `InGame` and `Paused` (cursor released while paused)
+  - [x] Add `bevy_egui` (version compatible with bevy 0.20; verify on crates.io, check it supports bevy 0.20 before adding)
+  - [x] `AppState` enum: `MainMenu`, `InGame`, `Paused`; gate streaming, fly cam, block edit, hotbar systems on `InGame` via `run_if(in_state(..))`
+  - [x] `ActiveWorld` resource (name, generator, save path), inserted on open and removed on exit; despawn all chunk entities and clear `VoxelWorld` on exit
+  - [x] Move camera/light spawn from `main.rs` `Startup` to world-open (`OnEnter(InGame)`), and cleanup on exit
+  - [x] Replace Esc handling in `cursor_grab_system` so Esc toggles `InGame` and `Paused` (cursor released while paused)
 - Done when: build and tests pass; app launches into an empty main menu state (stub screen) and a temporary dev trigger can enter and leave `InGame` without leaking chunk entities.
 
 ### Phase 4: Menus and world create/load/save GUI [STATUS: TODO]

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_egui::EguiPlugin;
 
 use crate::asset_texture_loader::{
     setup_asset_texture_loader_system, update_atlas_from_asset_server_system,
@@ -10,6 +11,7 @@ use crate::chunk::{Chunk, ChunkPos, world_to_chunk_and_local};
 use crate::culling::{VoxelRenderStats, update_render_stats_system};
 use crate::fly_cam::FlyCameraPlugin;
 use crate::fps::FpsOverlayPlugin;
+use crate::game_state::{GameStatePlugin, in_game_or_no_state};
 use crate::hotbar::HotbarPlugin;
 use crate::occlusion::{OcclusionCullingEnabled, OcclusionCullingTimer, occlusion_culling_system};
 use crate::registry::BlockRegistry;
@@ -151,6 +153,8 @@ impl Plugin for VoxelWorldPlugin {
             .init_resource::<OcclusionCullingEnabled>()
             .init_resource::<OcclusionCullingTimer>()
             .insert_resource(BlockRegistry::with_defaults())
+            .add_plugins(EguiPlugin::default())
+            .add_plugins(GameStatePlugin)
             .add_plugins(WorldGenPlugin)
             .add_plugins(FpsOverlayPlugin)
             .add_plugins(FlyCameraPlugin)
@@ -166,10 +170,10 @@ impl Plugin for VoxelWorldPlugin {
             .add_systems(
                 Update,
                 (
-                    stream_chunks_around_player_system,
-                    queue_async_remesh_system,
+                    stream_chunks_around_player_system.run_if(in_game_or_no_state),
+                    queue_async_remesh_system.run_if(in_game_or_no_state),
                     poll_mesh_tasks_system,
-                    occlusion_culling_system,
+                    occlusion_culling_system.run_if(in_game_or_no_state),
                     update_atlas_from_asset_server_system,
                     update_render_stats_system,
                     update_batching_stats_system,

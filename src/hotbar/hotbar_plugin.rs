@@ -2,6 +2,7 @@ use bevy::input::mouse::AccumulatedMouseScroll;
 use bevy::prelude::*;
 
 use crate::block_edit::SelectedBlock;
+use crate::game_state::{in_game_or_no_state, InGameEntity};
 use crate::hotbar::Hotbar;
 use crate::mesh::VoxelMaterialHandle;
 use crate::registry::BlockType;
@@ -21,9 +22,9 @@ impl Plugin for HotbarPlugin {
             .add_systems(
                 Update,
                 (
-                    hotbar_input_system,
-                    sync_hotbar_selection_system,
-                    update_hotbar_ui_system,
+                    hotbar_input_system.run_if(in_game_or_no_state),
+                    sync_hotbar_selection_system.run_if(in_game_or_no_state),
+                    update_hotbar_ui_system.run_if(in_game_or_no_state),
                 )
                     .chain(),
             );
@@ -44,19 +45,22 @@ fn setup_hotbar_ui_system(
 
     // Root UI container positioned at bottom center
     commands
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            bottom: Val::Px(10.0),
-            left: Val::Percent(50.0),
-            // hotbar is 182x22 scaled 2x -> 364x44
-            width: Val::Px(364.0),
-            height: Val::Px(44.0),
-            margin: UiRect {
-                left: Val::Px(-182.0),
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(10.0),
+                left: Val::Percent(50.0),
+                // hotbar is 182x22 scaled 2x -> 364x44
+                width: Val::Px(364.0),
+                height: Val::Px(44.0),
+                margin: UiRect {
+                    left: Val::Px(-182.0),
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        })
+            InGameEntity,
+        ))
         .with_children(|parent| {
             // Background hotbar sprite
             parent.spawn((

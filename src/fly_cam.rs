@@ -1,10 +1,12 @@
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
+use bevy_egui::EguiContext;
 
 use crate::block_edit::get_block_at;
 use crate::chunk::Chunk;
 use crate::collision::resolve_voxel_collision;
+use crate::game_state::{AppState, in_game_or_no_state};
 use crate::registry::BlockRegistry;
 use crate::settings::CAMERA_COLLIDER_HALF_EXTENTS;
 use crate::world::VoxelWorld;
@@ -44,19 +46,50 @@ pub fn cursor_grab_system(
     mouse_button: Res<ButtonInput<MouseButton>>,
     key_input: Res<ButtonInput<KeyCode>>,
     mut cursor_query: Query<&mut bevy::window::CursorOptions, With<PrimaryWindow>>,
+    state: Option<Res<State<AppState>>>,
+    mut next_state: Option<ResMut<NextState<AppState>>>,
+    mut egui_query: Query<&mut EguiContext>,
 ) {
     let Ok(mut cursor) = cursor_query.single_mut() else {
         return;
     };
 
-    if mouse_button.just_pressed(MouseButton::Left) {
-        cursor.visible = false;
-        cursor.grab_mode = CursorGrabMode::Locked;
-    }
+    let egui_wants_pointer = if let Ok(mut ctx) = egui_query.single_mut() {
+        ctx.get_mut().egui_wants_pointer_input()
+    } else {
+        false
+    };
 
-    if key_input.just_pressed(KeyCode::Escape) {
-        cursor.visible = true;
-        cursor.grab_mode = CursorGrabMode::None;
+    let current_state = state.map(|s| *s.get()).unwrap_or(AppState::InGame);
+    match current_state {
+        AppState::InGame => {
+            if key_input.just_pressed(KeyCode::Escape) {
+                if let Some(ref mut next) = next_state {
+                    next.set(AppState::Paused);
+                }
+                cursor.visible = true;
+                cursor.grab_mode = CursorGrabMode::None;
+            } else if mouse_button.just_pressed(MouseButton::Left) && !egui_wants_pointer {
+                cursor.visible = false;
+                cursor.grab_mode = CursorGrabMode::Locked;
+            }
+        }
+        AppState::Paused => {
+            if key_input.just_pressed(KeyCode::Escape) {
+                if let Some(ref mut next) = next_state {
+                    next.set(AppState::InGame);
+                }
+                cursor.visible = false;
+                cursor.grab_mode = CursorGrabMode::Locked;
+            } else {
+                cursor.visible = true;
+                cursor.grab_mode = CursorGrabMode::None;
+            }
+        }
+        AppState::MainMenu => {
+            cursor.visible = true;
+            cursor.grab_mode = CursorGrabMode::None;
+        }
     }
 }
 
@@ -167,7 +200,10 @@ impl Plugin for FlyCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (cursor_grab_system, fly_camera_controller_system),
+            (
+                cursor_grab_system,
+                fly_camera_controller_system.run_if(in_game_or_no_state),
+            ),
         );
     }
 }

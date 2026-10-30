@@ -18,9 +18,9 @@
 
 - [ ] add bevy_egui. create main memu. pause(esc) menu. world create/load/save gui. make it most simple for dev now.
 
-- [ ] add ./assets and resource pack zip to .gitignore.
+- [ ] add ./assets and resource pack zip to .gitignore. remove those from github.
 
 - [ ] web WASM. save data ins IndexedDB.
 
-- [ ] multiplayer early implementation. create new git branch. use websocket. backend server with tokio + websocket.
+- [ ] multiplayer early implementation. create new git branch. play in browser (WASM) use websocket. backend server with tokio + websocket.
 
