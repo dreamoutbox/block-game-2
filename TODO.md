@@ -12,3 +12,9 @@
 
 - [x] make flying camera not passthrough block. unless press `C`.
 
+- [ ] move world generation to separate module. no generate every time.
+
+- [ ] create new world create function. save to files with `bincode` crate.
+
+- [ ] add bevy_egui. create main memu. world create/load/save gui. make it most simple for dev new.
+
