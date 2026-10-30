@@ -22,6 +22,8 @@ pub struct FlyCamera {
     pub yaw: f32,
     /// Current pitch rotation around the local X axis in radians.
     pub pitch: f32,
+    /// Whether passthrough (noclip) mode is toggled on.
+    pub passthrough: bool,
 }
 
 impl Default for FlyCamera {
@@ -32,6 +34,7 @@ impl Default for FlyCamera {
             sensitivity: 0.003,
             yaw: 0.0,
             pitch: 0.0,
+            passthrough: false,
         }
     }
 }
@@ -82,6 +85,11 @@ pub fn fly_camera_controller_system(
     };
 
     for (mut transform, mut fly_cam) in camera_query.iter_mut() {
+        // Toggle passthrough mode when pressing 'C'
+        if key_input.just_pressed(KeyCode::KeyC) {
+            fly_cam.passthrough = !fly_cam.passthrough;
+        }
+
         // Mouse look when cursor is grabbed
         if is_locked && mouse_motion.delta != Vec2::ZERO {
             fly_cam.yaw -= mouse_motion.delta.x * sensitivity;
@@ -128,10 +136,8 @@ pub fn fly_camera_controller_system(
         if move_direction != Vec3::ZERO {
             let delta = move_direction.normalize() * current_speed * time.delta_secs();
 
-            // When pressing `C`, bypass collision checks to allow passing through blocks.
-            let passthrough = key_input.pressed(KeyCode::KeyC);
-
-            if !passthrough
+            // When passthrough is toggled on, bypass collision checks to allow passing through blocks.
+            if !fly_cam.passthrough
                 && let (Some(world), Some(reg)) = (voxel_world.as_deref(), registry.as_deref())
             {
                 let is_solid_fn = |world_pos: IVec3| -> bool {

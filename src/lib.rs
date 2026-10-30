@@ -754,10 +754,11 @@ mod tests {
         assert_eq!(cam.fast_multiplier, 2.5);
         assert_eq!(cam.pitch, 0.0);
         assert_eq!(cam.yaw, 0.0);
+        assert!(!cam.passthrough);
     }
 
     #[test]
-    fn test_fly_camera_collision_and_c_passthrough() {
+    fn test_fly_camera_collision_and_c_toggle_passthrough() {
         let mut app = App::new();
         app.add_plugins(bevy::time::TimePlugin);
         app.init_resource::<bevy::input::mouse::AccumulatedMouseMotion>();
@@ -812,15 +813,27 @@ mod tests {
         let pos_collided = app.world().get::<Transform>(camera_entity).unwrap().translation;
         assert!(pos_collided.x < 1.0 - CAMERA_COLLIDER_HALF_EXTENTS.x);
         assert!(pos_collided.x > 0.65);
+        assert!(!app.world().get::<FlyCamera>(camera_entity).unwrap().passthrough);
 
-        // Now press 'C' to enable passthrough
+        // Press 'C' once to toggle passthrough ON
         app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::KeyC);
         app.update();
-        app.update();
+        assert!(app.world().get::<FlyCamera>(camera_entity).unwrap().passthrough);
 
-        // With 'C' pressed, camera should have passed through into the block (x > 1.0)
+        // Clear 'C' from just_pressed / release it, update again
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().release(KeyCode::KeyC);
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().clear();
+        app.update();
+        assert!(app.world().get::<FlyCamera>(camera_entity).unwrap().passthrough);
+
+        // Camera should have passed through into the block (x > 1.0)
         let pos_passthrough = app.world().get::<Transform>(camera_entity).unwrap().translation;
         assert!(pos_passthrough.x > 1.0, "expected x > 1.0, got {}", pos_passthrough.x);
+
+        // Press 'C' again to toggle passthrough OFF
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::KeyC);
+        app.update();
+        assert!(!app.world().get::<FlyCamera>(camera_entity).unwrap().passthrough);
     }
 
     #[test]
