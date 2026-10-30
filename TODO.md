@@ -18,9 +18,9 @@
 
 - [x] add bevy_egui. create main memu. pause(esc) menu. world create/load/save gui. make it most simple for dev now.
 
-- [ ] add ./assets and resource pack zip to .gitignore. remove those from github.
+- [x] add ./assets and resource pack zip to .gitignore. remove those from github.
 
-- [ ] add github workflow to deploy on github pages when workflow_dispatch.
+- [x] add github workflow to deploy on github pages when workflow_dispatch.
 
 - [x] fix error in WASM egui `No fonts available until first call to Context::run()`.
 
