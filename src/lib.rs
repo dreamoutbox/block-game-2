@@ -1,4 +1,5 @@
 pub mod chunk;
+pub mod mesh;
 pub mod registry;
 pub mod world;
 pub mod world_gen;
@@ -6,6 +7,7 @@ pub mod world_gen;
 #[cfg(test)]
 mod tests {
     use super::chunk::*;
+    use super::mesh::*;
     use super::registry::*;
     use super::world::*;
     use super::world_gen::*;
@@ -198,5 +200,77 @@ mod tests {
         let entity2 = spawn_chunk(&mut app.world_mut().commands(), &mut world, &generator, pos);
         assert_eq!(entity1, entity2);
         assert_eq!(world.len(), 1);
+    }
+
+    #[test]
+    fn test_mesh_single_block_and_adjacent_culling() {
+        let registry = BlockRegistry::with_defaults();
+
+        // 1 block isolated -> 6 faces -> 36 indices
+        let mut chunk = Chunk::new(BlockType::Air.into());
+        chunk.set_block(5, 5, 5, BlockType::Stone.into());
+        let mesh_single = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry);
+        let count_single = mesh_single.indices().unwrap().len();
+        assert_eq!(count_single, 6 * 6); // 36 indices
+
+        // 2 adjacent blocks -> 10 faces -> 60 indices
+        chunk.set_block(6, 5, 5, BlockType::Stone.into());
+        let mesh_adjacent = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk, &|_| None, &registry);
+        let count_adjacent = mesh_adjacent.indices().unwrap().len();
+        assert_eq!(count_adjacent, 10 * 6); // 60 indices
+    }
+
+    #[test]
+    fn test_mesh_boundary_face_culling() {
+        let registry = BlockRegistry::with_defaults();
+
+        // Chunk A has a stone block at local x = 15
+        let mut chunk_a = Chunk::new(BlockType::Air.into());
+        chunk_a.set_block(15, 0, 0, BlockType::Stone.into());
+
+        // Chunk B has a stone block at local x = 0
+        let mut chunk_b = Chunk::new(BlockType::Air.into());
+        chunk_b.set_block(0, 0, 0, BlockType::Stone.into());
+
+        // Without Chunk B, Chunk A should have 6 faces (including PosX)
+        let mesh_without_b = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk_a, &|_| None, &registry);
+        assert_eq!(mesh_without_b.indices().unwrap().len(), 36);
+
+        // With Chunk B neighbor present at ChunkPos(1, 0, 0), PosX face of Chunk A should be culled (5 faces = 30 indices)
+        let get_chunk = |pos: ChunkPos| -> Option<&Chunk> {
+            if pos == ChunkPos::new(1, 0, 0) {
+                Some(&chunk_b)
+            } else {
+                None
+            }
+        };
+        let mesh_with_b = build_chunk_mesh(ChunkPos::new(0, 0, 0), &chunk_a, &get_chunk, &registry);
+        assert_eq!(mesh_with_b.indices().unwrap().len(), 5 * 6);
+    }
+
+    #[test]
+    fn test_sync_remesh_system() {
+        let mut app = App::new();
+        app.init_resource::<Assets<Mesh>>();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(BlockRegistry::with_defaults());
+        app.add_systems(Update, sync_remesh_dirty_chunks_system);
+
+        let mut chunk = Chunk::new(BlockType::Air.into());
+        chunk.set_block(0, 0, 0, BlockType::Stone.into());
+
+        let pos = ChunkPos::new(0, 0, 0);
+        let entity = app.world_mut().spawn((pos, chunk, ChunkDirty)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(pos, entity);
+
+        // Before update: entity has ChunkDirty, no Mesh3d
+        assert!(app.world().get::<ChunkDirty>(entity).is_some());
+        assert!(app.world().get::<Mesh3d>(entity).is_none());
+
+        app.update();
+
+        // After update: entity has Mesh3d, ChunkDirty is removed
+        assert!(app.world().get::<ChunkDirty>(entity).is_none());
+        assert!(app.world().get::<Mesh3d>(entity).is_some());
     }
 }

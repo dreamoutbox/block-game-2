@@ -26,14 +26,14 @@ fit for frequently-edited voxel worlds).
   - [x] Unit tests: determinism (same seed+pos → same chunk), surface continuity across chunk boundaries (no seams)
 - Done when: a multi-chunk area generates deterministically from a seed with continuous terrain across chunk borders; `cargo test` green.
 
-## Phase 3: Naive mesher + static rendering [STATUS: TODO]
+## Phase 3: Naive mesher + static rendering [STATUS: DONE]
 - Goal: get something on screen, correctness baseline before optimizing.
 - Tasks:
-  - [ ] Per-chunk mesh builder: one quad per exposed block face (6 faces, no merging)
-  - [ ] Face culling rule: skip face if neighbor block (same chunk or adjacent chunk) is opaque — mirrors Minetest's "don't draw hidden faces"
-  - [ ] Handle chunk-boundary neighbor lookups (read into adjacent chunk's border layer)
-  - [ ] Spawn `PbrBundle`/`Mesh3d` per chunk entity, rebuild mesh synchronously on dirty flag (sync for now — async comes in Phase 3)
-  - [ ] Basic texture atlas + UV mapping per face
+  - [x] Per-chunk mesh builder: one quad per exposed block face (6 faces, no merging)
+  - [x] Face culling rule: skip face if neighbor block (same chunk or adjacent chunk) is opaque — mirrors Minetest's "don't draw hidden faces"
+  - [x] Handle chunk-boundary neighbor lookups (read into adjacent chunk's border layer)
+  - [x] Spawn `PbrBundle`/`Mesh3d` per chunk entity, rebuild mesh synchronously on dirty flag (sync for now — async comes in Phase 3)
+  - [x] Basic texture atlas + UV mapping per face
 - Done when: a static multi-chunk world renders correctly with no missing/duplicate faces; editing a block updates its chunk mesh next frame.
 
 ## Phase 4: Async meshing [STATUS: TODO]
