@@ -46,12 +46,12 @@ fit for frequently-edited voxel worlds).
   - [x] Border-read snapshot: task must read a copied/Arc'd slice of neighbor data, not live chunk refs (avoid borrow/send issues across threads)
 - Done when: editing blocks under sustained load (e.g. scripted stress test placing/removing many blocks) shows no main-thread frame-time spike attributable to meshing; mesh correctness unchanged from Phase 2.
 
-## Phase 5: Frustum culling [STATUS: TODO]
+## Phase 5: Frustum culling [STATUS: DONE]
 - Goal: skip rendering chunks outside the camera view, like Minetest's frustum fix.
 - Tasks:
-  - [ ] Verify Bevy's built-in `Frustum`/`VisibleEntities` culling is active on chunk entities (correct `Aabb`/bounding volume per chunk mesh)
-  - [ ] Ensure chunk `Aabb` is set explicitly (don't rely on auto-calc being correct for sparse/empty chunks)
-  - [ ] Sanity check: disable all solid chunks outside view, confirm draw call count via Bevy diagnostics/`RenderDiagnosticsPlugin`
+  - [x] Verify Bevy's built-in `Frustum`/`VisibleEntities` culling is active on chunk entities (correct `Aabb`/bounding volume per chunk mesh)
+  - [x] Ensure chunk `Aabb` is set explicitly (don't rely on auto-calc being correct for sparse/empty chunks)
+  - [x] Sanity check: disable all solid chunks outside view, confirm draw call count via Bevy diagnostics/`RenderDiagnosticsPlugin`
 - Done when: moving camera shows draw-call count tracking visible chunk count only, confirmed via diagnostics overlay.
 
 ## Phase 6: Occlusion culling [STATUS: TODO]

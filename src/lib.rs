@@ -1,5 +1,6 @@
 pub mod async_mesh;
 pub mod chunk;
+pub mod culling;
 pub mod mesh;
 pub mod registry;
 pub mod world;
@@ -9,6 +10,7 @@ pub mod world_gen;
 mod tests {
     use super::async_mesh::*;
     use super::chunk::*;
+    use super::culling::*;
     use super::mesh::*;
     use super::registry::*;
     use super::world::*;
@@ -407,5 +409,62 @@ mod tests {
         }
 
         assert!(app.world().get::<Mesh3d>(entity).is_some());
+    }
+
+    #[test]
+    fn test_chunk_aabb_dimensions() {
+        let local_aabb = chunk_local_aabb();
+        assert_eq!(local_aabb.center, bevy::math::Vec3A::splat(8.0));
+        assert_eq!(local_aabb.half_extents, bevy::math::Vec3A::splat(8.0));
+
+        let world_aabb = chunk_world_aabb(ChunkPos::new(2, -1, 3));
+        assert_eq!(world_aabb.center.x, 32.0 + 8.0);
+        assert_eq!(world_aabb.center.y, -16.0 + 8.0);
+        assert_eq!(world_aabb.center.z, 48.0 + 8.0);
+    }
+
+    #[test]
+    fn test_frustum_culling_intersection() {
+        use bevy::camera::CameraProjection;
+
+        // Perspective projection matrix looking forward down -Z from origin
+        let proj = PerspectiveProjection::default().get_clip_from_view();
+        let frustum = bevy::camera::primitives::Frustum(
+            bevy::shape::ViewFrustum::from_clip_from_world(&proj),
+        );
+
+        // Chunk in front of camera (down -Z) should intersect frustum
+        let inside_pos = ChunkPos::new(0, 0, -2);
+        assert!(is_chunk_in_frustum(inside_pos, &frustum));
+
+        // Chunk completely behind the camera (down +Z) should be culled
+        let behind_pos = ChunkPos::new(0, 0, 5);
+        assert!(!is_chunk_in_frustum(behind_pos, &frustum));
+
+        // Chunk extremely far to the side (+X = 1000) should be culled
+        let far_pos = ChunkPos::new(1000, 0, -2);
+        assert!(!is_chunk_in_frustum(far_pos, &frustum));
+    }
+
+    #[test]
+    fn test_update_render_stats_system() {
+        let mut app = App::new();
+        app.init_resource::<VoxelRenderStats>();
+        app.add_systems(Update, update_render_stats_system);
+
+        // Entity 1: visible
+        let v1 = ViewVisibility::VISIBLE;
+        app.world_mut().spawn((ChunkPos::new(0, 0, 0), v1));
+
+        // Entity 2: culled / hidden
+        let v2 = ViewVisibility::HIDDEN;
+        app.world_mut().spawn((ChunkPos::new(1, 0, 0), v2));
+
+        app.update();
+
+        let stats = *app.world().resource::<VoxelRenderStats>();
+        assert_eq!(stats.total_chunks, 2);
+        assert_eq!(stats.visible_chunks, 1);
+        assert_eq!(stats.culled_chunks, 1);
     }
 }

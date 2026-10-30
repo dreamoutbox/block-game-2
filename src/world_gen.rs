@@ -179,7 +179,9 @@ pub fn spawn_chunk(
     }
 
     let chunk = generator.generate_chunk(pos);
-    let entity = commands.spawn((pos, chunk, ChunkDirty)).id();
+    let entity = commands
+        .spawn((pos, chunk, ChunkDirty, crate::culling::chunk_local_aabb()))
+        .id();
     world.insert(pos, entity);
     entity
 }

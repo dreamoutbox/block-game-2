@@ -120,6 +120,7 @@ pub fn sync_remesh_dirty_chunks_system(
             Mesh3d(mesh_handle),
             Transform::from_translation(translation),
             Visibility::default(),
+            crate::culling::chunk_local_aabb(),
         ));
 
         if let Some(ref mat) = material_res {
