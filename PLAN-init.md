@@ -36,14 +36,14 @@ fit for frequently-edited voxel worlds).
   - [x] Basic texture atlas + UV mapping per face
 - Done when: a static multi-chunk world renders correctly with no missing/duplicate faces; editing a block updates its chunk mesh next frame.
 
-## Phase 4: Async meshing [STATUS: TODO]
+## Phase 4: Async meshing [STATUS: DONE]
 - Goal: move mesh (re)generation off the main thread — Minetest's queued background meshing, no frame spikes on edit.
 - Tasks:
-  - [ ] Move mesh-building (Phase 3 algorithm) into `AsyncComputeTaskPool` tasks, keyed by `ChunkPos`
-  - [ ] `Task<Mesh>` component pattern: poll each frame, swap into `Mesh3d` handle when ready
-  - [ ] Dedup/coalesce: multiple dirty events for same chunk in one frame → single remesh task
-  - [ ] Debounce rapid edits (e.g. drag-placing blocks) so meshing isn't resubmitted every tick
-  - [ ] Border-read snapshot: task must read a copied/Arc'd slice of neighbor data, not live chunk refs (avoid borrow/send issues across threads)
+  - [x] Move mesh-building (Phase 3 algorithm) into `AsyncComputeTaskPool` tasks, keyed by `ChunkPos`
+  - [x] `Task<Mesh>` component pattern: poll each frame, swap into `Mesh3d` handle when ready
+  - [x] Dedup/coalesce: multiple dirty events for same chunk in one frame → single remesh task
+  - [x] Debounce rapid edits (e.g. drag-placing blocks) so meshing isn't resubmitted every tick
+  - [x] Border-read snapshot: task must read a copied/Arc'd slice of neighbor data, not live chunk refs (avoid borrow/send issues across threads)
 - Done when: editing blocks under sustained load (e.g. scripted stress test placing/removing many blocks) shows no main-thread frame-time spike attributable to meshing; mesh correctness unchanged from Phase 2.
 
 ## Phase 5: Frustum culling [STATUS: TODO]

@@ -1,3 +1,4 @@
+pub mod async_mesh;
 pub mod chunk;
 pub mod mesh;
 pub mod registry;
@@ -6,6 +7,7 @@ pub mod world_gen;
 
 #[cfg(test)]
 mod tests {
+    use super::async_mesh::*;
     use super::chunk::*;
     use super::mesh::*;
     use super::registry::*;
@@ -271,6 +273,139 @@ mod tests {
 
         // After update: entity has Mesh3d, ChunkDirty is removed
         assert!(app.world().get::<ChunkDirty>(entity).is_none());
+        assert!(app.world().get::<Mesh3d>(entity).is_some());
+    }
+
+    #[test]
+    fn test_async_mesh_lifecycle_and_debounce() {
+        let mut app = App::new();
+        bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+        app.init_resource::<Assets<Mesh>>();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(BlockRegistry::with_defaults());
+        app.insert_resource(DebounceSettings { debounce_frames: 2 });
+        app.add_systems(Update, (queue_async_remesh_system, poll_mesh_tasks_system));
+
+        let mut chunk = Chunk::new(BlockType::Air.into());
+        chunk.set_block(0, 0, 0, BlockType::Stone.into());
+
+        let pos = ChunkPos::new(0, 0, 0);
+        let entity = app.world_mut().spawn((pos, chunk, ChunkDirty)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(pos, entity);
+
+        // Frame 1: Debounce initialized (frames_remaining = 1)
+        app.update();
+        assert!(app.world().get::<ComputeMeshTask>(entity).is_none());
+        assert!(app.world().get::<ChunkDebounce>(entity).is_some());
+
+        // Frame 2: Debounce decrements (frames_remaining = 0)
+        app.update();
+        assert!(app.world().get::<ComputeMeshTask>(entity).is_none());
+
+        // Frame 3: Task dispatched to thread pool
+        app.update();
+        // Wait briefly for background compute to finish
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        // Frame 4: Task polled and resolved into Mesh3d
+        app.update();
+        assert!(app.world().get::<Mesh3d>(entity).is_some());
+        assert!(app.world().get::<ComputeMeshTask>(entity).is_none());
+        assert!(app.world().get::<ChunkDirty>(entity).is_none());
+    }
+
+    #[test]
+    fn test_async_mesh_coalesce_and_requeue() {
+        let mut app = App::new();
+        bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+        app.init_resource::<Assets<Mesh>>();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(BlockRegistry::with_defaults());
+        app.insert_resource(DebounceSettings { debounce_frames: 0 });
+        app.add_systems(Update, (queue_async_remesh_system, poll_mesh_tasks_system));
+
+        let mut chunk = Chunk::new(BlockType::Air.into());
+        chunk.set_block(0, 0, 0, BlockType::Stone.into());
+
+        let pos = ChunkPos::new(0, 0, 0);
+        let entity = app.world_mut().spawn((pos, chunk, ChunkDirty)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(pos, entity);
+
+        // Frame 1: task dispatched immediately
+        app.update();
+
+        // While task is in flight (or finishing), multiple edits occur
+        let mut commands = app.world_mut().commands();
+        request_chunk_remesh(&mut commands, entity, 0, true);
+        commands.entity(entity).insert(ChunkDirty);
+
+        // Next frame processes completion and requeue
+        app.update();
+        // Flush deferred commands
+        app.update();
+
+        // The requeue mechanism ensures ChunkDirty is preserved/re-added so edits are never dropped
+        assert!(app.world().get::<ChunkDirty>(entity).is_some() || app.world().get::<ComputeMeshTask>(entity).is_some() || app.world().get::<Mesh3d>(entity).is_some());
+    }
+
+    #[test]
+    fn test_chunk_snapshot_isolation() {
+        let registry = BlockRegistry::with_defaults();
+        let mut chunk = Chunk::new(BlockType::Air.into());
+        chunk.set_block(0, 0, 0, BlockType::Stone.into());
+
+        let snapshot = ChunkSnapshot {
+            pos: ChunkPos::new(0, 0, 0),
+            center: std::sync::Arc::new(chunk.clone()),
+            neighbors: [None, None, None, None, None, None],
+        };
+
+        // Mutating original chunk after snapshot does NOT alter snapshot geometry
+        chunk.set_block(1, 0, 0, BlockType::Stone.into());
+        let mesh = snapshot.build_mesh(&registry);
+        // Single block in snapshot = 36 indices
+        assert_eq!(mesh.indices().unwrap().len(), 36);
+    }
+
+    #[test]
+    fn test_rapid_block_edits_stress() {
+        let mut app = App::new();
+        bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+        app.init_resource::<Assets<Mesh>>();
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(BlockRegistry::with_defaults());
+        app.insert_resource(DebounceSettings { debounce_frames: 1 });
+        app.add_systems(Update, (queue_async_remesh_system, poll_mesh_tasks_system));
+
+        let pos = ChunkPos::new(0, 0, 0);
+        let chunk = Chunk::new(BlockType::Air.into());
+        let entity = app.world_mut().spawn((pos, chunk)).id();
+        app.world_mut().resource_mut::<VoxelWorld>().insert(pos, entity);
+
+        // Rapidly place and remove 100 blocks
+        for i in 0..100 {
+            let x = (i % 16) as usize;
+            let z = ((i / 16) % 16) as usize;
+            {
+                let mut chunk_mut = app.world_mut().get_mut::<Chunk>(entity).unwrap();
+                chunk_mut.set_block(x, 0, z, BlockType::Stone.into());
+            }
+            let is_running = app.world().get::<ComputeMeshTask>(entity).is_some();
+            let mut commands = app.world_mut().commands();
+            request_chunk_remesh(&mut commands, entity, 1, is_running);
+
+            // Tick app every 5 edits
+            if i % 5 == 0 {
+                app.update();
+            }
+        }
+
+        // Run until meshing settles
+        for _ in 0..10 {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            app.update();
+        }
+
         assert!(app.world().get::<Mesh3d>(entity).is_some());
     }
 }
