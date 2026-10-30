@@ -907,6 +907,7 @@ mod tests {
         app.insert_resource(material_handle.clone());
 
         // Decode source images and add them to Assets<Image>
+        let stone_png = load_png_rgba("minecraft/textures/block/stone.png").unwrap();
         let dirt_png = load_png_rgba("minecraft/textures/block/dirt.png").unwrap();
         let side_png = load_png_rgba("minecraft/textures/block/grass_block_side.png").unwrap();
         let overlay_png =
@@ -927,12 +928,14 @@ mod tests {
             )
         };
 
+        let stone_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(stone_png.clone()));
         let dirt_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(dirt_png.clone()));
         let side_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(side_png));
         let overlay_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(overlay_png));
         let top_handle = app.world_mut().resource_mut::<Assets<Image>>().add(to_bevy_image(top_png));
 
         app.insert_resource(AssetTextureLoader {
+            stone: stone_handle,
             dirt: dirt_handle,
             grass_side: side_handle,
             grass_side_overlay: overlay_handle,
@@ -960,7 +963,16 @@ mod tests {
             [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]]
         };
 
-        // 1. Dirt tile (tile 2) should match dirt.png
+        // 1. Stone tile (tile 1) should match stone.png
+        for y in 0..TILE_PIXEL_SIZE {
+            for x in 0..TILE_PIXEL_SIZE {
+                let atlas_pixel = get_tile_pixel(1, x, y);
+                let expected = stone_png.get_pixel(x, y).0;
+                assert_eq!(atlas_pixel, expected);
+            }
+        }
+
+        // 2. Dirt tile (tile 2) should match dirt.png
         for y in 0..TILE_PIXEL_SIZE {
             for x in 0..TILE_PIXEL_SIZE {
                 let atlas_pixel = get_tile_pixel(2, x, y);
