@@ -8,6 +8,9 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Voxel Engine (Minecraft Creative Fly & Minetest Techniques)".into(),
+                // Resize the canvas with the browser page (no-op on desktop).
+                fit_canvas_to_parent: true,
+                prevent_default_event_handling: true,
                 ..default()
             }),
             ..default()
