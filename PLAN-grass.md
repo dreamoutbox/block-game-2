@@ -19,16 +19,16 @@ Test command: `cargo nextest run --test-threads 1 --fail-fast`.
   - [x] Unit test: blitting a known PNG puts its first pixel at the tile's top-left atlas pixel
 - Done when: build and all tests pass; game runs identically in layout (flat colors still shown, just a larger atlas).
 
-### Phase 2: Dirt and grass textures [STATUS: TODO]
+### Phase 2: Dirt and grass textures [STATUS: DONE]
 - Goal: dirt and grass blocks render with Minecraft textures.
 - Tasks:
-  - [ ] Replace tile 2 with `dirt.png`
-  - [ ] Replace tile 4 (grass top) with `grass_block_top.png`
-  - [ ] Replace tile 3 (grass side) with `grass_block_side.png` composited with `grass_block_side_overlay.png` (alpha blend)
-  - [ ] Handle grass tint: top and overlay are grayscale in vanilla-style packs; verify, then multiply by a fixed Minecraft plains green (approx `#91BD59`) when blitting, not at runtime per-vertex
-  - [ ] Confirm `BlockType::Grass` face mapping in `registry.rs` still matches (sides 3, top 4, bottom 2 = dirt); no change expected
-  - [ ] Unit test: grass-top tile pixels are non-gray (tinted) and dirt tile equals `dirt.png` pixels
-  - [ ] Visual check: run game, inspect grass edges and dirt cliffs for correct orientation and no bleeding between tiles (nearest sampling already on)
+  - [x] Replace tile 2 with `dirt.png`
+  - [x] Replace tile 4 (grass top) with `grass_block_top.png`
+  - [x] Replace tile 3 (grass side) with `grass_block_side.png` composited with `grass_block_side_overlay.png` (alpha blend)
+  - [x] Handle grass tint: top and overlay are grayscale in vanilla-style packs; verify, then multiply by a fixed Minecraft plains green (approx `#91BD59`) when blitting, not at runtime per-vertex
+  - [x] Confirm `BlockType::Grass` face mapping in `registry.rs` still matches (sides 3, top 4, bottom 2 = dirt); no change expected
+  - [x] Unit test: grass-top tile pixels are non-gray (tinted) and dirt tile equals `dirt.png` pixels
+  - [x] Visual check: run game, inspect grass edges and dirt cliffs for correct orientation and no bleeding between tiles (nearest sampling already on)
 - Done when: tests pass; in-game grass shows textured top/sides, dirt shows dirt texture.
 
 ### Phase 3: Minecraft sky color [STATUS: TODO]

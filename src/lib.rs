@@ -803,4 +803,50 @@ mod tests {
         let missing_err = load_and_blit_png(&mut atlas_data, 0, "nonexistent.png");
         assert!(matches!(missing_err, Err(AtlasError::Io { .. })));
     }
+
+    #[test]
+    fn test_minecraft_grass_and_dirt_tiles_in_atlas() {
+        let atlas_image = create_texture_atlas_image();
+        let data = atlas_image.data.as_ref().expect("atlas image should contain pixel data");
+
+        // Helper to extract a pixel from a tile in the atlas
+        let get_tile_pixel = |tile_idx: u32, px: u32, py: u32| -> [u8; 4] {
+            let col = tile_idx % ATLAS_TILES_PER_ROW;
+            let row = tile_idx / ATLAS_TILES_PER_ROW;
+            let x = col * TILE_PIXEL_SIZE + px;
+            let y = row * TILE_PIXEL_SIZE + py;
+            let idx = ((y * ATLAS_PIXEL_SIZE + x) * 4) as usize;
+            [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]]
+        };
+
+        // 1. Dirt tile (tile 2) should match dirt.png
+        let dirt_png = load_png_rgba("minecraft/textures/block/dirt.png")
+            .expect("dirt.png should be available");
+        for y in 0..TILE_PIXEL_SIZE {
+            for x in 0..TILE_PIXEL_SIZE {
+                let atlas_pixel = get_tile_pixel(2, x, y);
+                let expected = dirt_png.get_pixel(x, y).0;
+                assert_eq!(atlas_pixel, expected);
+            }
+        }
+
+        // 2. Grass top tile (tile 4) should be tinted green (G > R and G > B, non-grayscale)
+        let grass_top_center = get_tile_pixel(4, 32, 32);
+        assert!(
+            grass_top_center[1] > grass_top_center[0] && grass_top_center[1] > grass_top_center[2],
+            "Grass top center pixel {:?} should be green-tinted",
+            grass_top_center
+        );
+
+        // 3. Grass side tile (tile 3) top row should be green, bottom row should match dirt
+        let grass_side_top = get_tile_pixel(3, 32, 2);
+        assert!(
+            grass_side_top[1] > grass_side_top[0] && grass_side_top[1] > grass_side_top[2],
+            "Grass side top pixel {:?} should be green-tinted",
+            grass_side_top
+        );
+        let grass_side_bottom = get_tile_pixel(3, 32, 60);
+        let dirt_bottom = dirt_png.get_pixel(32, 60).0;
+        assert_eq!(grass_side_bottom, dirt_bottom);
+    }
 }

@@ -13,6 +13,68 @@ pub const ATLAS_TILES_PER_ROW: u32 = 4;
 pub const TILE_PIXEL_SIZE: u32 = 64;
 pub const ATLAS_PIXEL_SIZE: u32 = ATLAS_TILES_PER_ROW * TILE_PIXEL_SIZE; // 256x256
 
+/// Fixed grass tint matching vanilla Minecraft plains biome.
+pub const MINECRAFT_GRASS_TINT: [u8; 3] = [144, 233, 84];
+
+/// Applies an RGB tint to an RGBA image by multiplying its color channels.
+///
+/// # Arguments
+/// * `img` - Mutable reference to the RGBA image to tint in-place.
+/// * `tint` - Color multiplier in RGB (`[r, g, b]` in 0..=255).
+///
+/// # Example
+/// ```rust
+/// use block_game_2::mesh::{tint_rgba_image, MINECRAFT_GRASS_TINT};
+/// use image::RgbaImage;
+///
+/// let mut img = RgbaImage::from_pixel(1, 1, image::Rgba([156, 156, 156, 255]));
+/// tint_rgba_image(&mut img, MINECRAFT_GRASS_TINT);
+/// assert!(img.get_pixel(0, 0).0[1] > img.get_pixel(0, 0).0[0]);
+/// ```
+pub fn tint_rgba_image(img: &mut image::RgbaImage, tint: [u8; 3]) {
+    for pixel in img.pixels_mut() {
+        pixel.0[0] = ((pixel.0[0] as u16 * tint[0] as u16) / 255) as u8;
+        pixel.0[1] = ((pixel.0[1] as u16 * tint[1] as u16) / 255) as u8;
+        pixel.0[2] = ((pixel.0[2] as u16 * tint[2] as u16) / 255) as u8;
+    }
+}
+
+/// Composites an RGBA overlay image onto a base image using standard alpha blending.
+///
+/// # Arguments
+/// * `base` - Destination base image modified in-place.
+/// * `overlay` - Source overlay image with alpha transparency.
+///
+/// # Example
+/// ```rust
+/// use block_game_2::mesh::composite_rgba_image;
+/// use image::RgbaImage;
+///
+/// let mut base = RgbaImage::from_pixel(1, 1, image::Rgba([100, 100, 100, 255]));
+/// let overlay = RgbaImage::from_pixel(1, 1, image::Rgba([0, 200, 0, 128]));
+/// composite_rgba_image(&mut base, &overlay);
+/// assert!(base.get_pixel(0, 0).0[1] > 100);
+/// ```
+pub fn composite_rgba_image(base: &mut image::RgbaImage, overlay: &image::RgbaImage) {
+    for (x, y, base_pixel) in base.enumerate_pixels_mut() {
+        if x < overlay.width() && y < overlay.height() {
+            let ov = overlay.get_pixel(x, y);
+            let alpha = ov.0[3] as u32;
+            if alpha == 0 {
+                continue;
+            } else if alpha == 255 {
+                *base_pixel = *ov;
+            } else {
+                let inv_alpha = 255 - alpha;
+                let r = (ov.0[0] as u32 * alpha + base_pixel.0[0] as u32 * inv_alpha) / 255;
+                let g = (ov.0[1] as u32 * alpha + base_pixel.0[1] as u32 * inv_alpha) / 255;
+                let b = (ov.0[2] as u32 * alpha + base_pixel.0[2] as u32 * inv_alpha) / 255;
+                base_pixel.0 = [r as u8, g as u8, b as u8, 255];
+            }
+        }
+    }
+}
+
 /// Blits a `TILE_PIXEL_SIZE x TILE_PIXEL_SIZE` RGBA pixel buffer into the atlas at the specified tile index.
 ///
 /// # Arguments
@@ -204,6 +266,46 @@ pub fn create_texture_atlas_image() -> Image {
     color_tile(&mut data, 5, [101, 67, 33, 255]);
     // Tile 6: Leaves (Green Foliage)
     color_tile(&mut data, 6, [46, 125, 50, 240]);
+
+    // Attempt loading Minecraft textures from assets, falling back gracefully to procedural patterns
+    if let Err(err) = load_and_blit_png(&mut data, 2, "minecraft/textures/block/dirt.png") {
+        warn!(?err, "Failed to load dirt block texture; falling back to procedural color");
+    }
+
+    match load_png_rgba("minecraft/textures/block/grass_block_side.png") {
+        Ok(mut side_img) => {
+            if let Ok(mut overlay_img) =
+                load_png_rgba("minecraft/textures/block/grass_block_side_overlay.png")
+            {
+                tint_rgba_image(&mut overlay_img, MINECRAFT_GRASS_TINT);
+                composite_rgba_image(&mut side_img, &overlay_img);
+            }
+            if let Err(err) = blit_tile_rgba(&mut data, 3, side_img.as_raw()) {
+                warn!(?err, "Failed to blit grass side texture");
+            }
+        }
+        Err(err) => {
+            warn!(
+                ?err,
+                "Failed to load grass block side texture; falling back to procedural color"
+            );
+        }
+    }
+
+    match load_png_rgba("minecraft/textures/block/grass_block_top.png") {
+        Ok(mut top_img) => {
+            tint_rgba_image(&mut top_img, MINECRAFT_GRASS_TINT);
+            if let Err(err) = blit_tile_rgba(&mut data, 4, top_img.as_raw()) {
+                warn!(?err, "Failed to blit grass top texture");
+            }
+        }
+        Err(err) => {
+            warn!(
+                ?err,
+                "Failed to load grass block top texture; falling back to procedural color"
+            );
+        }
+    }
 
     Image::new(
         Extent3d {
