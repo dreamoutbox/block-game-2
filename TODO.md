@@ -8,13 +8,13 @@
 
 - [x] add player tools bar player gui. currently show grass block, dirt block.
 
-- [ ] fix dig below dirt. see empty block. should add stone texture (assets/minecraft/textures/block/stone.png).
+- [x] fix dig below dirt. see empty block. should add stone texture (assets/minecraft/textures/block/stone.png).
 
 - [x] make flying camera not passthrough block. unless press `C`.
 
-- [ ] move world generation to separate module. no generate every time.
+- [ ] move world generation code to separate module. no generate every game open.
 
 - [ ] create new world create function. save to files with `bincode` crate.
 
-- [ ] add bevy_egui. create main memu. world create/load/save gui. make it most simple for dev new.
+- [ ] add bevy_egui. create main memu. pause(esc) menu. world create/load/save gui. make it most simple for dev now.
 
