@@ -38,6 +38,11 @@ pub fn pause_menu_ui_system(
                 } else {
                     ui.label("World: [In-Memory]");
                 }
+                #[cfg(target_arch = "wasm32")]
+                ui.colored_label(
+                    egui::Color32::from_rgb(200, 200, 100),
+                    "Saving unavailable on web",
+                );
             });
 
             ui.add_space(8.0);

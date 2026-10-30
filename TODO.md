@@ -12,11 +12,11 @@
 
 - [x] make flying camera not passthrough block. unless press `C`.
 
-- [ ] move world generation code to separate module. no generate every game open.
+- [x] move world generation code to separate module. no generate every game open.
 
-- [ ] create new world create function. save to files with `bincode` crate.
+- [x] create new world create function. save to files with `bincode` crate.
 
-- [ ] add bevy_egui. create main memu. pause(esc) menu. world create/load/save gui. make it most simple for dev now.
+- [x] add bevy_egui. create main memu. pause(esc) menu. world create/load/save gui. make it most simple for dev now.
 
 - [ ] add ./assets and resource pack zip to .gitignore. remove those from github.
 

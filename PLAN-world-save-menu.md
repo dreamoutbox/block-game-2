@@ -53,12 +53,12 @@ Findings (read-only):
   - [x] Tests: world list function (temp dir) and state transitions via a headless `App` with `StatesPlugin`
 - Done when: tests pass; manual run: create world, break a block, Esc, Save, quit to menu, load world, see the same terrain and the edit without regeneration.
 
-### Phase 5: Cleanup [STATUS: TODO]
+### Phase 5: Cleanup [STATUS: DONE]
 - Goal: docs and repo hygiene.
 - Tasks:
-  - [ ] Add `saves/` to `.gitignore`
-  - [ ] Tick the three items in [TODO.md](TODO.md)
-  - [ ] WASM: show "saving unavailable" in the UI (or hide Save/Load) via the cfg gate
+  - [x] Add `saves/` to `.gitignore`
+  - [x] Tick the three items in [TODO.md](TODO.md)
+  - [x] WASM: show "saving unavailable" in the UI (or hide Save/Load) via the cfg gate
 - Done when: build, tests, and wasm check pass.
 
 ## Unknowns, risks, assumptions

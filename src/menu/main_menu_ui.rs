@@ -34,6 +34,11 @@ pub fn main_menu_ui_system(
             ui.vertical_centered(|ui| {
                 ui.heading("BLOCK GAME 2");
                 ui.label("Voxel Engine with Save & Load");
+                #[cfg(target_arch = "wasm32")]
+                ui.colored_label(
+                    egui::Color32::from_rgb(200, 200, 100),
+                    "WebAssembly mode: file persistence is unavailable.",
+                );
             });
 
             ui.add_space(8.0);
