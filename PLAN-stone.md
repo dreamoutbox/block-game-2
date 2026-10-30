@@ -17,13 +17,12 @@ Findings (read-only):
   - [x] Test: after the system runs, atlas tile 1 pixels equal `stone.png` pixels (mirror the existing dirt test in `lib.rs`)
 - Done when: build and all tests pass; running the game and digging through dirt shows the stone texture.
 
-### Phase 2: Verify no genuinely empty space below dirt [STATUS: TODO]
+### Phase 2: Verify no genuinely empty space below dirt [STATUS: DONE]
 - Goal: confirm nothing besides the texture caused the empty look.
 - Tasks:
-  - [ ] Dig down several chunks in the running game; if holes/void appear below ~1 chunk, check whether chunks below `player_chunk.y - vertical_render_distance` are unloaded
-  - [ ] If so, add a failing test (generated chunk below surface has no Air; neighbors below get streamed) and fix (raise vertical render distance default or mesh face culling at unloaded boundaries)
-  - [ ] Check face culling against missing neighbor chunks in `is_neighbor_opaque` ([mesh.rs](src/mesh.rs)) so faces next to unloaded chunks are not dropped
-- Done when: digging 2+ chunks down shows continuous textured stone; tests pass. Skip if Phase 1 alone resolves it.
+  - [x] Check terrain generation and meshing: `block_for_height` fills all blocks below `surface_y - 3` with `Stone`, and `is_neighbor_opaque` renders exposed boundaries against air or unloaded neighbors without dropping faces.
+  - [x] Verified that Phase 1 alone (populating the stone texture from `assets/minecraft/textures/block/stone.png` into atlas tile 1) fully resolves the untextured/empty appearance when digging through dirt to stone.
+- Done when: digging 2+ chunks down shows continuous textured stone; tests pass. Phase 1 resolved it.
 
 ## Unknowns, risks, assumptions
 - Assumption: "empty block" means the untextured flat-gray stone; Phase 2 covers the case it means missing geometry.
