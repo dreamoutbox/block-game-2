@@ -2,6 +2,8 @@ pub mod async_mesh;
 pub mod batching;
 pub mod chunk;
 pub mod culling;
+pub mod fly_cam;
+pub mod fps;
 pub mod mesh;
 pub mod occlusion;
 pub mod registry;
@@ -15,6 +17,8 @@ mod tests {
     use super::batching::*;
     use super::chunk::*;
     use super::culling::*;
+    use super::fly_cam::*;
+    use super::fps::*;
     use super::mesh::*;
     use super::occlusion::*;
     use super::registry::*;
@@ -600,6 +604,7 @@ mod tests {
     #[test]
     fn test_streaming_chunks_around_player() {
         let mut app = App::new();
+        bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
         app.insert_resource(VoxelWorld::default());
         app.insert_resource(TerrainGenerator::new(TerrainConfig::default()));
         app.insert_resource(WorldStreamingSettings {
@@ -607,7 +612,10 @@ mod tests {
             vertical_render_distance: 0,
             unload_margin: 1,
         });
-        app.add_systems(Update, stream_chunks_around_player_system);
+        app.add_systems(
+            Update,
+            (stream_chunks_around_player_system, poll_chunk_generation_system).chain(),
+        );
 
         // Spawn player at world origin
         let player_entity = app.world_mut().spawn((
@@ -616,6 +624,8 @@ mod tests {
         )).id();
 
         app.update();
+        std::thread::sleep(std::time::Duration::from_millis(15));
+        app.update();
 
         let initial_count = app.world().resource::<VoxelWorld>().len();
         // At radius 1, horizontally dx=-1..=1, dz=-1..=1 where dx^2+dz^2 <= 1 => (0,0), (1,0), (-1,0), (0,1), (0,-1) = 5 chunks
@@ -623,6 +633,8 @@ mod tests {
 
         // Move player far along X to (100.0, 0.0, 0.0)
         app.world_mut().entity_mut(player_entity).insert(Transform::from_xyz(100.0, 0.0, 0.0));
+        app.update();
+        std::thread::sleep(std::time::Duration::from_millis(15));
         app.update();
 
         let moved_count = app.world().resource::<VoxelWorld>().len();
@@ -659,6 +671,7 @@ mod tests {
             Update,
             (
                 stream_chunks_around_player_system,
+                poll_chunk_generation_system,
                 queue_async_remesh_system,
                 poll_mesh_tasks_system,
                 occlusion_culling_system,
@@ -696,5 +709,65 @@ mod tests {
         let batch_stats = *app.world().resource::<BatchingStats>();
         assert!(batch_stats.is_batch_optimal);
         assert_eq!(batch_stats.unique_materials, 1);
+    }
+
+    #[test]
+    fn test_async_chunk_generation() {
+        let mut app = App::new();
+        bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(TerrainGenerator::new(TerrainConfig::default()));
+        app.add_systems(Update, poll_chunk_generation_system);
+
+        let mut world = VoxelWorld::default();
+        let generator = TerrainGenerator::new(TerrainConfig::default());
+        let pos = ChunkPos::new(0, 0, 0);
+
+        let entity = spawn_chunk_async(&mut app.world_mut().commands(), &mut world, &generator, pos);
+        app.update();
+
+        // Wait for compute task pool if still in flight
+        if app.world().get::<GenerateChunkTask>(entity).is_some() {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            app.update();
+        }
+
+        // After task resolves, entity has Chunk and ChunkDirty, and GenerateChunkTask is removed
+        assert!(app.world().get::<GenerateChunkTask>(entity).is_none());
+        assert!(app.world().get::<Chunk>(entity).is_some());
+        assert!(app.world().get::<ChunkDirty>(entity).is_some());
+    }
+
+    #[test]
+    fn test_fly_camera_defaults() {
+        let cam = FlyCamera::default();
+        assert_eq!(cam.speed, 20.0);
+        assert_eq!(cam.fast_multiplier, 2.5);
+        assert_eq!(cam.pitch, 0.0);
+        assert_eq!(cam.yaw, 0.0);
+    }
+
+    #[test]
+    fn test_fps_text_setup_and_update() {
+        let mut app = App::new();
+        app.add_plugins(bevy::time::TimePlugin);
+        app.init_resource::<bevy::diagnostic::FrameCount>();
+        app.add_plugins(bevy::diagnostic::DiagnosticsPlugin);
+        app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
+        app.insert_resource(VoxelWorld::default());
+        app.insert_resource(VoxelRenderStats {
+            total_chunks: 10,
+            visible_chunks: 7,
+            culled_chunks: 3,
+        });
+        app.add_systems(Startup, setup_fps_text_system);
+        app.add_systems(Update, update_fps_text_system);
+
+        app.update();
+
+        // Query spawned FpsText
+        let mut query = app.world_mut().query_filtered::<&Text, With<FpsText>>();
+        let text = query.single(app.world()).unwrap();
+        assert!(text.0.contains("Chunks: 0 (Vis: 7, Culled: 3)"));
     }
 }

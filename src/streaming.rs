@@ -4,10 +4,12 @@ use crate::async_mesh::{poll_mesh_tasks_system, queue_async_remesh_system, Debou
 use crate::batching::{setup_voxel_material_system, update_batching_stats_system, BatchingStats};
 use crate::chunk::{world_to_chunk_and_local, ChunkPos};
 use crate::culling::{update_render_stats_system, VoxelRenderStats};
+use crate::fly_cam::FlyCameraPlugin;
+use crate::fps::FpsOverlayPlugin;
 use crate::occlusion::{occlusion_culling_system, OcclusionCullingEnabled};
 use crate::registry::BlockRegistry;
 use crate::world::VoxelWorld;
-use crate::world_gen::{spawn_chunk, TerrainConfig, TerrainGenerator};
+use crate::world_gen::{poll_chunk_generation_system, spawn_chunk_async, TerrainConfig, TerrainGenerator};
 
 /// Settings controlling streaming radius and unloading hysteresis around the viewer.
 #[derive(Resource, Clone, Copy, Debug)]
@@ -61,7 +63,7 @@ pub fn stream_chunks_around_player_system(
                         player_chunk.0.y + dy,
                         player_chunk.0.z + dz,
                     );
-                    spawn_chunk(&mut commands, &mut voxel_world, &terrain_gen, target_pos);
+                    spawn_chunk_async(&mut commands, &mut voxel_world, &terrain_gen, target_pos);
                 }
             }
         }
@@ -103,11 +105,14 @@ impl Plugin for VoxelWorldPlugin {
             .init_resource::<OcclusionCullingEnabled>()
             .insert_resource(BlockRegistry::with_defaults())
             .insert_resource(TerrainGenerator::new(TerrainConfig::default()))
+            .add_plugins(FpsOverlayPlugin)
+            .add_plugins(FlyCameraPlugin)
             .add_systems(Startup, setup_voxel_material_system)
             .add_systems(
                 Update,
                 (
                     stream_chunks_around_player_system,
+                    poll_chunk_generation_system,
                     queue_async_remesh_system,
                     poll_mesh_tasks_system,
                     occlusion_culling_system,

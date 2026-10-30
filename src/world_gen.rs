@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use bevy::tasks::futures_lite::future::block_on;
+use bevy::tasks::{AsyncComputeTaskPool, Task};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use crate::chunk::{chunk_and_local_to_world, BlockId, Chunk, ChunkDirty, ChunkPos, CHUNK_SIZE};
@@ -184,4 +186,74 @@ pub fn spawn_chunk(
         .id();
     world.insert(pos, entity);
     entity
+}
+
+/// Component holding an in-flight background procedural chunk generation task.
+#[derive(Component)]
+pub struct GenerateChunkTask(pub Task<Chunk>);
+
+/// Dispatches asynchronous procedural chunk generation to the compute task pool.
+///
+/// # Arguments
+/// * `commands` - Entity commands to spawn entities and components.
+/// * `world` - VoxelWorld resource tracking loaded chunks.
+/// * `generator` - Procedural terrain generator.
+/// * `pos` - Chunk grid coordinate to spawn.
+///
+/// # Example
+/// ```rust
+/// use block_game_2::world_gen::{spawn_chunk_async, TerrainConfig, TerrainGenerator};
+/// use block_game_2::world::VoxelWorld;
+/// use block_game_2::chunk::ChunkPos;
+/// use bevy::prelude::*;
+///
+/// let mut app = App::new();
+/// bevy::tasks::AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
+/// let mut world = VoxelWorld::default();
+/// let generator = TerrainGenerator::new(TerrainConfig::default());
+/// let entity = spawn_chunk_async(&mut app.world_mut().commands(), &mut world, &generator, ChunkPos::new(0, 0, 0));
+/// assert!(world.contains(&ChunkPos::new(0, 0, 0)));
+/// ```
+pub fn spawn_chunk_async(
+    commands: &mut Commands,
+    world: &mut VoxelWorld,
+    generator: &TerrainGenerator,
+    pos: ChunkPos,
+) -> Entity {
+    if let Some(existing) = world.get(&pos) {
+        return existing;
+    }
+
+    let pool = AsyncComputeTaskPool::get();
+    let generator_clone = generator.clone();
+    let task = pool.spawn(async move {
+        generator_clone.generate_chunk(pos)
+    });
+
+    let entity = commands
+        .spawn((
+            pos,
+            GenerateChunkTask(task),
+            crate::culling::chunk_local_aabb(),
+        ))
+        .id();
+
+    world.insert(pos, entity);
+    entity
+}
+
+/// System polling in-flight background chunk generation tasks and adding chunk voxel data and ChunkDirty.
+pub fn poll_chunk_generation_system(
+    mut commands: Commands,
+    mut tasks: Query<(Entity, &mut GenerateChunkTask)>,
+) {
+    for (entity, mut task) in tasks.iter_mut() {
+        if task.0.is_finished() {
+            let chunk = block_on(&mut task.0);
+            commands
+                .entity(entity)
+                .remove::<GenerateChunkTask>()
+                .insert((chunk, ChunkDirty));
+        }
+    }
 }
